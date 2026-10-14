@@ -71,7 +71,7 @@ run('iron','lou',true);run('ash','ida',true);run('ash','sid',false);run('iron','
 // --- quests complete, pay out and unlock the Turret Layer ---
 {const S=api.SAVE;const silver0=S.silver;
  api.SAVE.selMap='dust';api.startRun();const G=api.G;
- G.p.modules.back={...G.p.modules.back,id:'mines',lvl:10};
+ S.ms.done.m_mines=false;S.ms.prog.m_mines=0;S.mods=S.mods.filter(m=>m!=='layer');G.p.modules.back={...G.p.modules.back,id:'mines',lvl:10}; // earlier random runs may have finished it already
  const got=api.checkQuests(true);assert.ok(got.some(q=>q.id==='m_mines'),'mine dropper milestone');assert.ok(S.mods.includes('layer'));
  api.endRun('quit');assert.ok(G.qDone.some(q=>q.id==='m_mines'));assert.ok(S.silver>=silver0);
  assert.ok(S.best.time>0||G.t===0);const runs=S.runs;
@@ -89,13 +89,15 @@ run('iron','lou',true);run('ash','ida',true);run('ash','sid',false);run('iron','
  const slotOf={cannon:'front',plow:'front',broadside:'side',flamer:'side',mines:'back',drone:'back',layer:'back',turret:'top',tesla:'top'};
  for(const id in api.AB){
    api.setMode('play');const slot=slotOf[id];P.modules[slot]=api.mkMod(id,P.wdm);
-   const foe=G.ents.find(e=>!e.d.neutral&&!e.d.boss)||null;if(foe){foe.x=P.x+Math.cos(P.a)*90;foe.y=P.y+Math.sin(P.a)*90;}
+   let foe=G.ents.find(e=>!e.d.neutral&&!e.d.boss&&!e.dead);
+   if(!foe){foe={type:'tank',d:{hp:9999,r:16,spd:0,stat:1,contact:0},hp:9999,max:9999,r:16,a:0,ta:0,t:99,slow:0,hit:0,flash:0,dead:false,st:'walk',pt:2,spin:0,t2:0,t3:0};G.ents.push(foe);} // every ability needs something to hit
+   foe.x=P.x+Math.cos(P.a)*90;foe.y=P.y+Math.sin(P.a)*90;
    if(id==='drone')for(let i=0;i<10;i++)api.update(1/60);
    assert.ok(api.useAbility(slot),id+' ability fires');assert.strictEqual(P.modules[slot].ab.t,api.AB[id].cd,id+' on cooldown');
    assert.ok(!api.useAbility(slot),id+' cannot fire while cooling');
    for(let i=0;i<120;i++){if(api.mode!=='play')api.pick(0);api.setMode('play');api.update(1/60);P.hp=P.maxHp;}
    const m=P.modules[slot],pool=api.upgradePool().filter(c=>c.t===api.AB[id].name);assert.strictEqual(pool.length,2,id+' has cooldown + power cards');
-   const cd0=m.ab.cd;pool[0].ap(1);pool[1].ap(1);assert.ok(m.ab.cd<cd0&&m.ab.pow===1,id+' cards apply');
+   const cd0=m.ab.cd,pw0=m.ab.pow;pool[0].ap(1);pool[1].ap(1);assert.ok(m.ab.cd<cd0&&m.ab.pow===pw0+1,id+' cards apply'); // a level-up may have taken one already
    api.render();
  }
  console.log('abilities ok:',Object.keys(api.AB).join(' '));api.endRun('quit');}
