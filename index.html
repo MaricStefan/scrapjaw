@@ -358,14 +358,14 @@ const EN={
   depot: {hp:320,r:23,spd:0,  xp:24,edible:2, neutral:1, stat:1},
   grunt: {hp:10, r:7, spd:58, xp:2, edible:0, contact:4, shoot:{cd:2.4,dmg:5,spd:230,range:300,n:1}},
   biker: {hp:24, r:9, spd:150,xp:3, edible:0, contact:9},
-  tank:  {hp:140,r:16,spd:72, xp:12,edible:2, contact:12,keep:230,trail:1, shoot:{cd:2.6,dmg:11,spd:270,range:390,n:1}},
+  tank:  {hp:140,r:16,spd:72, xp:12,edible:2, contact:12,keep:230,trail:1, shoot:{cd:3.2,dmg:9,spd:270,range:390,n:1}},
   bomber:{hp:50, r:11,spd:175,xp:6, edible:-1,trail:1,bomb:{dmg:28,r:80}},
   tower: {hp:430,r:21,spd:0,  xp:30,edible:3, stat:1, shoot:{cd:1.9,dmg:9,spd:240,range:430,n:3}},
   heavy: {hp:900,r:27,spd:45, xp:60,edible:-1,contact:20,keep:270,trail:1, shoot:{cd:3,dmg:15,spd:255,range:430,n:3}},
   magnetcart:{hp:120,r:15,spd:88,xp:5,edible:-1,flee:1,trail:1,helper:'magnet'},
   repaircart:{hp:100,r:15,spd:88,xp:5,edible:-1,flee:1,trail:1,helper:'repair'},
   drillhog:{hp:1500,r:42,spd:65, edible:-1,contact:24,boss:1,trail:1,name:'Drillhog'},
-  hoover:  {hp:3000,r:48,spd:60, edible:-1,contact:30,boss:1,trail:1,name:'The Hoover'},
+  hoover:  {hp:2400,r:48,spd:60, edible:-1,contact:30,boss:1,trail:1,name:'The Hoover'},
   mortar:  {hp:4600,r:48,spd:75, edible:-1,contact:18,boss:1,trail:1,name:'Mortar King'},
   citadel: {hp:7000,r:58,spd:34, edible:-1,contact:26,boss:1,trail:1,name:'Black Citadel'},
   // Ironfield: the Foundry. base = the Greenvale role it stands in for (eating rules, quests and the 2D fallback follow it)
@@ -387,17 +387,18 @@ const FAM_MIX=0.8; // share of hostiles that come from the map's own family; neu
 function famType(t){const f=G.mapDef.fam;return f&&f[t]&&(EN[t].neutral||Math.random()<FAM_MIX)?f[t]:t;}
 const RANK_EATS=['soldiers and scrap','trucks and huts','light tanks and fuel depots','gun towers'];
 const WAVES=[null,
-  {iv:1.35,n:[2,4],pool:{grunt:6,biker:3,tank:1}},
-  {iv:1.15,n:[2,5],pool:{grunt:5,biker:3,tank:2,bomber:1.5,tower:.4}},
+  {iv:1.35,n:[2,4],pool:{grunt:6,biker:3,tank:0.6}},
+  {iv:1.15,n:[2,5],pool:{grunt:5,biker:3,tank:1.4,bomber:1,tower:.4}},
   {iv:1.0, n:[3,5],pool:{grunt:4,biker:3,tank:3,bomber:2,tower:.6,heavy:.5}},
   {iv:0.9, n:[3,6],pool:{grunt:4,biker:3,tank:3,bomber:2.5,tower:.8,heavy:1}},
 ];
+const TYPE_CAP={tank:4,tower:2,heavy:1,bomber:4}; // most alive at once on Greenvale; harder maps scale with their cap
 const BOSS_AT=75, OT_PAY=30; // Overtime (after the last boss) pays silver every OT_PAY seconds
 const RAR={c:{name:'Common',col:'var(--bronze)',k:1},r:{name:'Rare',col:'var(--silver)',k:1.6},e:{name:'Epic',col:'var(--gold)',k:2.5},
   n:{name:'New module',col:'var(--teal)'},b:{name:'Rank up',col:'var(--gold)'},
   f:{name:'Bank it',col:'var(--gold)'},o:{name:'High risk',col:'var(--rust)'}};
 const MAPS=[
-  {id:'dust',name:'Greenvale',desc:'Easy. Thin patrols and half damage taken. Start here.',dmg:0.4,hp:0.8,spawn:1.7,silver:1,cap:70,
+  {id:'dust',name:'Greenvale',desc:'Easy. Thin patrols and half damage taken. Start here.',dmg:0.3,hp:0.8,esc:0.35,spawn:2.2,silver:1,cap:50,
     colors:{light:['#9fae62','#94a356'],dark:['#9fae62','#94a356']},req:null,
     pal:{ground:'#8fa85a',patch:'#9ab364',patch2:'#859e52',road:'#b98060',trail:'#8a5a44',out:'#7f8c4c',trunk:'#5b4330',leaf:'#4f7f45',leaf2:'#3f7446',rock:'#a39d8c',roundP:1}},
   {id:'iron',name:'Ironfield',desc:'Hard. Tougher enemies, more of them. 1.4× silver.',dmg:0.9,hp:1.1,spawn:1.05,silver:1.4,cap:130,
@@ -523,6 +524,8 @@ function newGame(mapId,capId){
   for(let i=0;i<75;i++)spawnNeutral(true);
   if(R3.on)setupWorld(G.mapDef);
 }
+// stage escalation stops once the boss arrives, so a long boss fight can't snowball (Overtime keeps climbing)
+function escT(){return G.overtime?G.stageT:Math.min(G.stageT,BOSS_AT);}
 function zoom(){return Math.min(W,H)/(500+G.p.rank*75);}
 function viewR(){if(R3.on){const v=viewSize();return Math.hypot(v.w/2,v.h/2/Math.sin(PITCH))+110;}return Math.hypot(W,H)/2/zoom()+70;}
 function spawnDist(a){
@@ -536,7 +539,7 @@ function spawnDist(a){
 /* ---------- spawning ---------- */
 function addEnt(type,x,y){
   const d=EN[type];
-  const sc=d.boss?G.mapDef.hp:d.neutral?1:(1+(G.stage-1)*0.55+G.stageT/220)*G.mapDef.hp;
+  const sc=d.boss?G.mapDef.hp:d.neutral?1:(1+((G.stage-1)+escT()/120)*(G.mapDef.esc||0.55))*G.mapDef.hp; // esc = how fast enemies toughen per stage
   const e={type,d,x:clamp(x,40,WORLD-40),y:clamp(y,40,WORLD-40),hp:d.hp*sc,max:0,r:d.r,a:Math.random()*TAU,ta:0,
     t:d.shoot?rnd(0.5,d.shoot.cd):0,slow:0,hit:0,flash:0,dead:false,st:'walk',pt:2,spin:0,t2:0,t3:0};
   e.max=e.hp;G.ents.push(e);return e;
@@ -552,12 +555,14 @@ function spawnNeutral(initial){
 }
 function spawnHostiles(){
   const w=WAVES[G.stage];const p=G.p;
-  let host=0;for(const e of G.ents)if(!e.d.neutral)host++;
+  let host=0;const alive={};for(const e of G.ents)if(!e.d.neutral){host++;const b_=e.d.base||e.type;alive[b_]=(alive[b_]||0)+1;}
   if(host>G.mapDef.cap*(G.overtime?1.6:1))return;
+  const capK=G.mapDef.cap/50*(G.overtime?1.6:1);
   const n=Math.round(rnd(w.n[0],w.n[1]+0.99));
   const base=Math.random()*TAU;
   for(let i=0;i<n;i++){
-    const type=famType(pickW(w.pool));
+    let role=pickW(w.pool);if(TYPE_CAP[role]&&(alive[role]||0)>=Math.round(TYPE_CAP[role]*capK))role='grunt'; // ranged/static types can't pile up
+    alive[role]=(alive[role]||0)+1;const type=famType(role);
     const a=base+rnd(-0.5,0.5);const r=spawnDist(a);
     addEnt(type,p.x+Math.cos(a)*r,p.y+Math.sin(a)*r);
   }
@@ -900,7 +905,7 @@ function bossAI(e,dt,dx,dy,dist,sm){
       if(e.pt<=0){e.st='walk';e.pt=4.5;}
     }else{
       if(dist>220)move(e.a,e.d.spd*sm);
-      if(e.t2<=0){e.t2=half?1.6:2.2;for(let i=-2;i<=2;i++)eshoot(e.x,e.y,toP+i*0.18,230,9);}
+      if(e.t2<=0){e.t2=half?1.6:2.2;const w_=half?2:1;for(let i=-w_;i<=w_;i++)eshoot(e.x,e.y,toP+i*0.18,230,9);} // 3-way, 5-way below half HP
       if(e.pt<=0){e.st='pull';e.pt=3;banner('','It\'s pulling you in. Drive away!');}
     }
   }else if(e.type==='mortar'){
@@ -1288,7 +1293,7 @@ function update(dt){
   if(G.overtime){G.otT+=dt;if(G.otT>=G.otNext){G.otNext+=OT_PAY;const sv=Math.round(25*G.mapDef.silver*p.silverMult*(1+G.otT/180));G.otSilver+=sv;
     addText(p.x,p.y-p.r-14,'+'+sv+' silver','#d9e1ea');sfx('heal');buzz(15);}}
   G.spawnT-=dt;
-  if(G.spawnT<=0){const w=WAVES[G.stage];G.spawnT=w.iv*G.mapDef.spawn*(G.overtime?0.25:1)*(G.boss?1.3:1)*Math.max(0.6,1-G.stageT/300);spawnHostiles();}
+  if(G.spawnT<=0){const w=WAVES[G.stage];G.spawnT=w.iv*G.mapDef.spawn*(G.overtime?0.25:1)*(G.boss?1.8:1)*Math.max(0.6,1-escT()/300);spawnHostiles();}
   G.neutT-=dt;
   if(G.neutT<=0){G.neutT=1;let n=0;for(const e of G.ents)if(e.d.neutral)n++;for(let i=n;i<70;i+=4)spawnNeutral(false);}
   if(G.overtime){G.mortarT-=dt;if(G.mortarT<=0){G.mortarT=2.4;G.strikes.push({x:p.x+Math.cos(p.a)*p.v*0.8+rnd(-40,40),y:p.y+Math.sin(p.a)*p.v*0.8+rnd(-40,40),t:1.2,max:1.2,r:70,dmg:20});}}

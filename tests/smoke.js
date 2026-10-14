@@ -99,6 +99,11 @@ run('iron','lou',true);run('ash','ida',true);run('ash','sid',false);run('iron','
    api.render();
  }
  console.log('abilities ok:',Object.keys(api.AB).join(' '));api.endRun('quit');}
+// --- ranged and static enemies can't pile up (per-type caps) ---
+{api.SAVE.selMap='dust';api.startRun();const G=api.G,P=G.p;G.stage=2;let maxT=0,maxW=0;
+ for(let i=0;i<60*120;i++){if(api.mode==='play'){api.joy.dx=0;api.joy.dy=0;api.update(1/60);P.hp=P.maxHp;if(G.boss)G.boss=null,G.bossSpawned=true;
+   const c=r=>G.ents.filter(e=>!e.dead&&(e.d.base||e.type)===r).length;maxT=Math.max(maxT,c('tank'));maxW=Math.max(maxW,c('tower'));}else api.pick(0);}
+ assert.ok(maxT<=4&&maxW<=2,'Greenvale caps: tanks '+maxT+' towers '+maxW);console.log('type caps ok: tanks',maxT,'towers',maxW);api.endRun('quit');}
 // --- Main Gun swings up to 45° each way, never further ---
 {api.SAVE.selMap='dust';api.startRun();const G=api.G,P=G.p;P.modules.front=api.mkMod('cannon',1);
  const test=(deg)=>{G.ents=G.ents.filter(e=>e.d.neutral);G.spawnT=G.helperT=1e9;G.pb.length=0;P.gunO=0;P.v=0;P.a=0;P.modules.front.t=0;
