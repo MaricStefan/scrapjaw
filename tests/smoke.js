@@ -99,6 +99,16 @@ run('iron','lou',true);run('ash','ida',true);run('ash','sid',false);run('iron','
    api.render();
  }
  console.log('abilities ok:',Object.keys(api.AB).join(' '));api.endRun('quit');}
+// --- garrisons burst open when you drive close; the Swarm rushes weak enemies before the boss ---
+{api.SAVE.selMap='dust';api.startRun();const G=api.G,P=G.p;G.t=10;
+ const hut=G.ents.find(e=>e.type==='hut');assert.ok(G.ents.some(e=>e.garrison),'some buildings are garrisoned');
+ hut.garrison=5;hut.x=P.x+150;hut.y=P.y;const before=G.ents.filter(e=>!e.d.neutral).length;api.update(1/60);
+ assert.strictEqual(hut.garrison,0,'garrison opens');assert.ok(G.ents.filter(e=>!e.d.neutral).length>=before+5,'soldiers pour out');api.render();
+ G.ents=G.ents.filter(e=>e.d.neutral);G.stageT=54;let sawSwarm=false,spawned=0;const seen=new Set();
+ for(let i=0;i<60*14;i++){if(api.mode!=='play'){api.pick(0);api.setMode('play');}api.update(1/60);P.hp=P.maxHp;if(G.swarm)sawSwarm=true;
+   for(const e of G.ents)if(!e.d.neutral&&!seen.has(e)){seen.add(e);if(G.swarm)spawned++;}}
+ assert.ok(sawSwarm&&!G.swarm,'swarm starts and ends');assert.ok(spawned>=20,'swarm spawns lots of enemies: '+spawned);
+ console.log('garrison + swarm ok: swarm spawned',spawned);api.endRun('quit');}
 // --- ranged and static enemies can't pile up (per-type caps) ---
 {api.SAVE.selMap='dust';api.startRun();const G=api.G,P=G.p;G.stage=2;let maxT=0,maxW=0;
  for(let i=0;i<60*120;i++){if(api.mode==='play'){api.joy.dx=0;api.joy.dy=0;api.update(1/60);P.hp=P.maxHp;if(G.boss)G.boss=null,G.bossSpawned=true;
