@@ -161,6 +161,40 @@ run('iron','lou',true);run('ash','ida',true);run('ash','sid',false);run('iron','
  B.cars.forEach(c=>api.hurt(c,1e9));api.update(1/60);assert.ok(!B.shielded,'shield gone with the cars');const h2=B.hp;api.hurt(B,500);assert.ok(Math.abs((h2-B.hp)-500)<1,'full damage');
  api.hurt(B,1e9);for(let i=0;i<120&&api.mode==='play';i++)api.update(1/60);assert.ok(G.bossKills>=1);
  console.log('ironfield ok:',JSON.stringify({ox,cr,an,du}));api.setMode('play');api.endRun('quit');}
+// --- Ashlands: the Cinder Clans spawn, and every boss mechanic works ---
+{api.SAVE.selMap='ash';api.startRun();const G=api.G,P=G.p;const seen={};
+ for(let i=0;i<60*50;i++){if(api.mode==='play'){api.joy.dx=Math.cos(i/90);api.joy.dy=Math.sin(i/70);api.update(1/60);P.hp=P.maxHp;for(const e of G.ents)seen[e.type]=1;if(i%30===0)api.render();}else api.pick(0);}
+ for(const t of ['ashwalker','cinderbike','ashhut','scrapwagon'])assert.ok(seen[t],'Ashlands spawns '+t);
+ const reset=(stage)=>{api.setMode('play');G.ents=G.ents.filter(e=>e.d.neutral);G.boss=null;G.stage=stage;G.stageT=74.99;G.bossSpawned=false;G.spawnT=G.helperT=1e9;G.eb=[];G.strikes=[];G.waves=[];api.update(1/60);return G.boss;};
+ const tick=(n,fn)=>{for(let i=0;i<n;i++){if(api.mode!=='play'){api.pick(0);api.setMode('play');}api.update(1/60);P.hp=P.maxHp;if(fn)fn(i);if(i%20===0){api.render();api.R3.on=false;api.render();api.R3.on=true;}}};
+ // Cinder Wyrm: burrows (untargetable), emerges, and its segments pass damage to the head
+ let W=reset(1);assert.strictEqual(W.type,'wyrm');let hid=false,back=false;tick(60*9,()=>{if(W.hidden)hid=true;if(hid&&!W.hidden)back=true;});
+ assert.ok(hid&&back,'wyrm burrows and resurfaces');assert.strictEqual(W.segs.length,6);
+ W.hidden=false;const hw=W.hp;api.hurt(W.segs[2],100);assert.ok(Math.abs((hw-W.hp)-60)<1,'segment relays 60% to the head');
+ W.hidden=true;const hh=W.hp;api.hurt(W,100);assert.strictEqual(W.hp,hh,'burrowed wyrm takes no damage');W.hidden=false;
+ api.hurt(W,1e9);tick(90);assert.ok(W.segs.every(s=>s.dead),'segments go down with the head');
+ // Ash Prophet: the mirror reflects shots and blocks damage
+ let Pr=reset(2);assert.strictEqual(Pr.type,'prophet');Pr.st='mirror';Pr.pt=3;Pr.x=P.x+100;Pr.y=P.y;api.update(1/60);
+ const ph=Pr.hp;api.hurt(Pr,500);assert.strictEqual(Pr.hp,ph,'mirror blocks damage');
+ G.pb.push({x:Pr.x-Pr.r-2,y:Pr.y,vx:300,vy:0,dmg:20,life:1,r:5,pierce:0,hits:[],col:'#fff'});const eb0=G.eb.length;api.update(1/60);
+ assert.ok(G.eb.length>eb0,'mirror reflects a shot back');api.hurt(Pr,1e9);api.update(1/60);
+ for(let i=0;i<120&&api.mode==='play';i++)api.update(1/60);if(api.mode!=='play')api.pick(0);
+ // Twin Kilns: two at once; the first kill enrages the other, the second ends the fight
+ let K=reset(3);assert.strictEqual(K.type,'kiln');const K2=K.twin;assert.ok(K2&&K2.type==='kiln'&&K2.twin===K,'two kilns');
+ tick(60*3);const kills0=G.bossKills;api.hurt(K,1e9);api.update(1/60);
+ assert.ok(K2.enraged&&G.boss===K2&&G.bossKills===kills0,'other kiln enraged, fight goes on');api.hurt(K2,1e9);
+ for(let i=0;i<120&&api.mode==='play';i++)api.update(1/60);assert.strictEqual(G.bossKills,kills0+1,'both down ends the fight');if(api.mode!=='play')api.pick(0);
+ // The Caldera: vents shield it; meteor showers and lava rings
+ let C=reset(4);assert.strictEqual(C.type,'caldera');let sawWave=false,sawStrike=false;tick(60*9,()=>{if(G.waves.length)sawWave=true;if(G.strikes.length)sawStrike=true;});
+ assert.ok(C.vents.length===4&&sawWave&&sawStrike,'caldera vents, rings and meteors');
+ const ch=C.hp;api.hurt(C,400);assert.ok(Math.abs((ch-C.hp)-100)<1,'four vents block 75%');C.vents.forEach(v=>api.hurt(v,1e9));api.update(1/60);
+ const ch2=C.hp;api.hurt(C,400);assert.ok(Math.abs((ch2-C.hp)-400)<1,'no vents, full damage');
+ // Obsidian Spire: warning line, then a sweeping beam that hurts
+ api.setMode('play');G.ents=G.ents.filter(e=>e.d.neutral);G.boss=null;G.bossSpawned=true;api.joy.dx=api.joy.dy=0;P.v=0;
+ const sp=api.addEnt('spire',P.x+200,P.y);sp.lt=0;let aimed=false,fired=false,dmg=0;
+ for(let i=0;i<60*3;i++){P.v=0;P.iframes=0;const h=P.hp;api.update(1/60);dmg+=Math.max(0,h-P.hp);P.hp=P.maxHp;if(sp.las==='aim')aimed=true;if(sp.las==='fire')fired=true;if(i%20===0)api.render();}
+ assert.ok(aimed&&fired&&dmg>0,'spire warns, then its beam hurts: '+dmg.toFixed(1));
+ console.log('ashlands ok: wyrm, prophet, twin kilns, caldera');api.setMode('play');api.endRun('quit');}
 // --- mastery: at level 8 every module offers a passive or ability capstone, and each one works ---
 {api.SAVE.selMap='dust';api.startRun();const G=api.G,P=G.p;
  const slotOf={cannon:'front',plow:'front',broadside:'side',flamer:'side',mines:'back',drone:'back',layer:'back',turret:'top',tesla:'top'};
