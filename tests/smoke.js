@@ -93,6 +93,7 @@ run('iron','lou',true);run('ash','ida',true);run('ash','sid',false);run('iron','
    if(!foe){foe={type:'tank',d:{hp:9999,r:16,spd:0,stat:1,contact:0},hp:9999,max:9999,r:16,a:0,ta:0,t:99,slow:0,hit:0,flash:0,dead:false,st:'walk',pt:2,spin:0,t2:0,t3:0};G.ents.push(foe);} // every ability needs something to hit
    foe.x=P.x+Math.cos(P.a)*90;foe.y=P.y+Math.sin(P.a)*90;
    if(id==='drone')for(let i=0;i<10;i++)api.update(1/60);
+   while(api.mode!=='play'){api.pick(0);api.setMode('play');} // a level-up may have popped up meanwhile
    assert.ok(api.useAbility(slot),id+' ability fires');assert.strictEqual(P.modules[slot].ab.t,api.AB[id].cd,id+' on cooldown');
    assert.ok(!api.useAbility(slot),id+' cannot fire while cooling');
    for(let i=0;i<120;i++){if(api.mode!=='play')api.pick(0);api.setMode('play');api.update(1/60);P.hp=P.maxHp;}
@@ -230,6 +231,7 @@ run('iron','lou',true);run('ash','ida',true);run('ash','sid',false);run('iron','
    api.afterPick();assert.strictEqual(api.mode,'level',id+' offers mastery');api.pick(pick);
    assert.strictEqual(m.mastery,pick?'a':'p',id+' mastery applied');
    const front=dummy(P.x+120,P.y),back=dummy(P.x-120,P.y);
+   while(api.mode!=='play'){api.pick(0);api.setMode('play');}
    const ex0=m.extra;assert.ok(api.useAbility(slot),id+'/'+m.mastery+' ability fires');
    const r={burns:G.burns.length,mines:G.mines.length,sentries:G.sentries.length,backHit:back.hp<1e6};
    for(let i=0;i<60*2;i++){if(api.mode!=='play'){api.pick(0);api.setMode('play');}api.update(1/60);P.hp=P.maxHp;if(i%20===0){api.render();api.R3.on=false;api.render();api.R3.on=true;}}
