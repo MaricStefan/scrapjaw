@@ -161,6 +161,36 @@ run('iron','lou',true);run('ash','ida',true);run('ash','sid',false);run('iron','
  B.cars.forEach(c=>api.hurt(c,1e9));api.update(1/60);assert.ok(!B.shielded,'shield gone with the cars');const h2=B.hp;api.hurt(B,500);assert.ok(Math.abs((h2-B.hp)-500)<1,'full damage');
  api.hurt(B,1e9);for(let i=0;i<120&&api.mode==='play';i++)api.update(1/60);assert.ok(G.bossKills>=1);
  console.log('ironfield ok:',JSON.stringify({ox,cr,an,du}));api.setMode('play');api.endRun('quit');}
+// --- mastery: at level 8 every module offers a passive or ability capstone, and each one works ---
+{api.SAVE.selMap='dust';api.startRun();const G=api.G,P=G.p;
+ const slotOf={cannon:'front',plow:'front',broadside:'side',flamer:'side',mines:'back',drone:'back',layer:'back',turret:'top',tesla:'top'};
+ const dummy=(x,y)=>{const e={type:'tank',d:{hp:1e6,r:16,spd:0,stat:1,contact:0},hp:1e6,max:1e6,r:16,a:0,ta:0,t:99,slow:0,hit:0,flash:0,dead:false,st:'walk',pt:2,spin:0,t2:0,t3:0,x,y};G.ents.push(e);return e;};
+ const res={};
+ api.MODS_CD_TURRET=api.mkMod('turret',1).cd;
+ for(const id in api.MASTERY)for(const pick of [0,1]){
+   api.setMode('play');G.ents=G.ents.filter(e=>e.d.neutral);G.spawnT=G.helperT=1e9;G.burns=[];G.mines=[];G.sentries=[];G.drones=[];P.a=0;P.gunO=0;
+   const slot=slotOf[id];const m=api.mkMod(id,1);m.lvl=8;P.modules[slot]=m;
+   api.afterPick();assert.strictEqual(api.mode,'level',id+' offers mastery');api.pick(pick);
+   assert.strictEqual(m.mastery,pick?'a':'p',id+' mastery applied');
+   const front=dummy(P.x+120,P.y),back=dummy(P.x-120,P.y);
+   const ex0=m.extra;assert.ok(api.useAbility(slot),id+'/'+m.mastery+' ability fires');
+   const r={burns:G.burns.length,mines:G.mines.length,sentries:G.sentries.length,backHit:back.hp<1e6};
+   for(let i=0;i<60*2;i++){if(api.mode!=='play'){api.pick(0);api.setMode('play');}api.update(1/60);P.hp=P.maxHp;if(i%20===0){api.render();api.R3.on=false;api.render();api.R3.on=true;}}
+   r.backHit2=back.hp<1e6;res[id+'/'+m.mastery]=r;
+   if(m.mastery==='a'){
+     if(id==='cannon')assert.ok(r.burns>3,'Siege Shell leaves fire');
+     if(id==='plow')assert.ok(r.backHit,'Earthquake hits behind you');
+     if(id==='flamer')assert.ok(r.burns>=12,'Inferno Ring');
+     if(id==='mines')assert.ok(r.mines>=12,'Carpet doubles mines');
+     if(id==='layer')assert.ok(r.sentries>=2,'Airdrop drops two');
+   }else{
+     if(id==='drone')assert.strictEqual(m.extra,3,'Swarm Bay adds drones');
+     if(id==='turret')assert.ok(m.cd<api.MODS_CD_TURRET,'Twin Mount fires faster');
+   }
+ }
+ // a module gets its mastery offer only once
+ const m=P.modules.front;api.setMode('play');api.afterPick();assert.strictEqual(api.mode,'play','no second offer');
+ console.log('mastery ok:',Object.keys(res).length,'capstones');api.endRun('quit');}
 // --- Overtime is optional after the 4th boss, and the clear counts either way ---
 function toChoice(){api.SAVE.selMap='dust';api.startRun();const G=api.G;G.stage=4;G.stageT=74;G.p.rank=3;
   for(let i=0;i<60*30&&(api.mode==='play'||api.mode==='level');i++){if(api.mode==='level'){api.pick(0);continue;}api.update(1/60);G.p.hp=G.p.maxHp;if(G.boss)api.hurt(G.boss,1e9);}
