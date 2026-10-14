@@ -120,6 +120,29 @@ run('iron','lou',true);run('ash','ida',true);run('ash','sid',false);run('iron','
  api.setMode('play');api.update(1/60);assert.ok(P.bulk>0&&P.r>r0,'upgrades add bulk: '+P.bulk.toFixed(2)+' r '+P.r.toFixed(1));
  const b0=P.bulk;P.bulk=10;api.update(1/60);const rBig=P.r;P.bulk=b0;assert.ok(rBig>r0+5,'bulk grows the hull');
  console.log('bulk ok: bulk',P.bulk.toFixed(2),'radius',r0,'->',P.r.toFixed(1));api.endRun('quit');}
+// --- tiered workshop: tiers open by category, perks apply, old module purchases count ---
+{const S=api.SAVE,saved={mods:S.mods.slice(),perks:S.perks.slice(),silver:S.silver};
+ S.mods=['plow'];S.perks=[];const W=api.WORKSHOP,cat=id=>W.find(c=>c.id===id),own=it=>it.mod?S.mods.includes(it.mod):S.perks.includes(it.id);
+ const count=c=>c.items.filter(own).length;assert.strictEqual(count(cat('ram')),1,'old Ram Plow purchase counts toward Ramming');
+ S.perks=['hardened','prow','riveted','spaced','magnet','spare','salvage','loaders','twinmounts','secondwind','fieldkit','tracks','steamroller'];
+ api.SAVE.selMap='dust';api.SAVE.selCap='sarge';api.startRun();const G=api.G,P=G.p;
+ assert.ok(Math.abs(P.wdm-1.08)<1e-9&&Math.abs(P.ramDmg-28*1.2)<1e-9&&P.maxHp===135&&Math.abs(P.taken-0.94)<1e-9&&P.rerolls===3,'perks apply at run start');
+ assert.ok(P.modules.side&&P.modules.side.id==='broadside','Twin Mounts fits Broadside');assert.ok(P.modules.front.cd<0.85,'Quick Loaders');
+ P.iframes=0;P.hp=5;api.update(0);G.eb=[{x:P.x,y:P.y,vx:0,vy:0,dmg:999,r:5,life:1,col:'#fff'}];api.update(1/60);
+ assert.strictEqual(api.mode,'play','Second Wind saves you once');assert.ok(Math.abs(P.hp-P.maxHp*0.3)<1);
+ P.iframes=0;G.eb=[{x:P.x,y:P.y,vx:0,vy:0,dmg:9999,r:5,life:1,col:'#fff'}];api.update(1/60);assert.strictEqual(api.mode,'over','only once per run');
+ S.mods=saved.mods;S.perks=saved.perks;S.silver=saved.silver;console.log('workshop ok');}
+// --- artifacts: a chest per stage, a choice of two, and each one works ---
+{api.SAVE.selMap='dust';api.startRun();const G=api.G,P=G.p;G.chestT=0.01;api.update(1/60);
+ assert.strictEqual(G.chests.length,1,'a chest spawns');const c=G.chests[0];P.x=c.x;P.y=c.y;api.update(1/60);
+ assert.strictEqual(api.mode,'level','chest offers a choice');api.pick(0);assert.strictEqual(G.arts.length,1,'artifact taken');api.setMode('play');
+ G.arts=Object.keys(api.ARTIFACTS);for(const id of G.arts){const A=api.ARTIFACTS[id];if(A.ap)A.ap(P);}
+ P.modules.side=api.mkMod('broadside',P.wdm);P.modules.back=api.mkMod('mines',P.wdm);
+ const foe=api.addEnt('tank',P.x+150,P.y);foe.hp=foe.max=1e6;api.addEnt('tank',P.x+200,P.y+60).hp=1e6;
+ P.nitroCd=0;let pb=0;api.joy.dx=1;api.joy.dy=0;api.update(0);
+ for(let i=0;i<60*4;i++){if(api.mode!=='play'){api.pick(0);api.setMode('play');}if(i===10){P.nitroCd=0;api.update(0);}api.update(1/60);P.hp=P.maxHp;if(i%30===0){api.render();api.R3.on=false;api.render();api.R3.on=true;}}
+ assert.ok(G.ents.some(e=>e.burnDps>0),'incendiary sets things burning');
+ console.log('artifacts ok:',G.arts.length);api.endRun('quit');}
 // --- ranged and static enemies can't pile up (per-type caps) ---
 {api.SAVE.selMap='dust';api.startRun();const G=api.G,P=G.p;G.stage=2;let maxT=0,maxW=0;
  for(let i=0;i<60*120;i++){if(api.mode==='play'){api.joy.dx=0;api.joy.dy=0;api.update(1/60);P.hp=P.maxHp;if(G.boss)G.boss=null,G.bossSpawned=true;
