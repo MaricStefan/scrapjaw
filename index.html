@@ -4,6 +4,12 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Scrapjaw</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#1e1922">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Scrapjaw">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Black+Ops+One&family=Barlow+Condensed:wght@500;600;700&display=swap" rel="stylesheet">
@@ -138,6 +144,8 @@ button:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
   font-family:'Black Ops One',Impact,sans-serif;box-shadow:0 5px 0 #000,inset 0 2px 0 rgba(255,255,255,.2);text-shadow:0 2px 0 rgba(0,0,0,.4)}
 .big:active{transform:translateY(3px);box-shadow:0 2px 0 #000}
 .best{margin-top:14px;font-size:17px;color:var(--muted);font-weight:600}
+#installBtn{width:100%;margin-top:12px;flex:none}
+.ioshint{margin:10px 0 0;font-size:16px;color:var(--muted)}
 .stats{display:grid;grid-template-columns:1fr 1fr;gap:6px 12px;margin:12px 0 0;font-size:18px}
 .stats div{display:flex;justify-content:space-between;border-bottom:2px dotted #4a4052;padding-bottom:2px}
 .stats b{font-weight:700;color:#fff}
@@ -235,6 +243,8 @@ button:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
       </ul>
       <button class="big" id="startBtn">Play</button>
       <p class="best" id="best"></p>
+      <button class="btn" id="installBtn" hidden>Install app</button>
+      <p class="ioshint" id="iosHint" hidden>Install: tap Share, then Add to Home Screen.</p>
       <div class="toggles" id="titleToggles"></div>
     </div>
   </div>
@@ -1962,6 +1972,24 @@ function updateHUD(){
   for(const k of SLOT_KEYS){const m=p.modules[k],el=hud.slotEl&&hud.slotEl[k];if(!m||!el)continue;const cd=m.ab.t>0?Math.ceil(100*m.ab.t/m.ab.cd):0;
     if(hudCache['cd'+k]!==cd){hudCache['cd'+k]=cd;el.style.setProperty('--cd',cd+'%');el.classList.toggle('ready',cd===0);}}
 }
+
+/* ---------- install (PWA) ---------- */
+// sw.js caches the game for offline play; manifest.webmanifest holds the icon (an SVG drawn in code).
+// Only over http(s): opening index.html as a file keeps working without any of this.
+let installEvt=null;
+if(typeof navigator!=='undefined'&&'serviceWorker' in navigator&&/^https?:$/.test(location.protocol)){
+  addEventListener('load',()=>{navigator.serviceWorker.register('sw.js').catch(()=>{});
+    fetch('manifest.webmanifest').then(r=>r.json()).then(m=>{ // favicon + iOS home-screen icon from the manifest's SVG
+      const src=m.icons[0].src,link=(rel,href)=>{const l=document.createElement('link');l.rel=rel;l.href=href;document.head.appendChild(l);};
+      link('icon',src);const img=new Image();img.onload=()=>{const c=document.createElement('canvas');c.width=c.height=180;c.getContext('2d').drawImage(img,0,0,180,180);link('apple-touch-icon',c.toDataURL('image/png'));};img.src=src;
+    }).catch(()=>{});
+  });
+  addEventListener('beforeinstallprompt',e=>{e.preventDefault();installEvt=e;$('#installBtn').hidden=false;});
+  addEventListener('appinstalled',()=>{installEvt=null;$('#installBtn').hidden=true;});
+  const ios=/iP(hone|ad|od)/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+  if(ios&&!navigator.standalone)$('#iosHint').hidden=false;
+}
+$('#installBtn').addEventListener('click',()=>{if(!installEvt)return;installEvt.prompt();installEvt.userChoice.finally(()=>{installEvt=null;$('#installBtn').hidden=true;});});
 
 /* ---------- loop ---------- */
 function resize(){

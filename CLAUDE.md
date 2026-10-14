@@ -1,6 +1,6 @@
 # Scrapjaw – notes for Claude Code
 
-Mobile-first 3D tank roguelike in ONE file: `index.html` (inline CSS and JS, inside one IIFE). Keep it a single self-contained file unless we explicitly decide to split it.
+Mobile-first 3D tank roguelike in ONE file: `index.html` (inline CSS and JS, inside one IIFE). Keep it a single self-contained file unless we explicitly decide to split it. The only other runtime files are `manifest.webmanifest` and `sw.js`, which the installable app (PWA) needs; browsers can't take them inline.
 
 ## Hard rules
 - **No external assets.** All models are built from three.js primitives, and all audio is synthesized with WebAudio. The only external scripts are three.js **r128** from cdnjs (pinned) and Google Fonts (Black Ops One, Barlow Condensed).
@@ -21,17 +21,19 @@ Mobile-first 3D tank roguelike in ONE file: `index.html` (inline CSS and JS, ins
   - `MODELS` are instanced enemy parts; `BOSS_MODELS` and `buildPlayer3D()` (which grows tiers by rank) build normal groups.
   - `setupWorld()` builds the ground, roads and trees; `render3D()` draws each frame; `drawOverlay3D()` handles 2D overlays such as HP bars, texts, arrows and the joystick.
   - The camera is orthographic at a 55° pitch (`PITCH`). Game angle `a` maps to three.js yaw `-a`.
+- `install (PWA)`: registers `sw.js` (only over http/https), adds the favicon and iOS home-screen icon from the manifest's SVG, and shows the title screen's Install button or iPhone hint. The app icon is an SVG drawn in code inside `manifest.webmanifest`. `sw.js` makes pages network-first and the pinned three.js plus fonts cache-first. When you add a new runtime file, add it to `CORE` in `sw.js`.
 - `render2D()` is the fallback if WebGL or three.js fails.
 - `HUD`: `updateHUD()`.
 
 ## Testing
 - `npm install && npm test` runs `tests/smoke.js`. It plays several full runs on all maps with stubbed DOM and WebGL, using real three.js math. It must finish without exceptions.
 - `python3 tests/screenshots.py` (on Windows: `py -3 tests/screenshots.py`) takes real headless-Chromium screenshots into `shots/`. Look at them after any visual change.
+- `py -3 tests/pwa.py` serves the game locally and checks, in headless Chromium, the manifest and icon, the service worker, Chrome's install criteria, and that the game boots and plays offline. Run it after touching `sw.js`, the manifest, or the `<head>`.
 - Test hook: if `window.__SJ_TEST` exists, the game passes it an API (`G`, `mode`, `update`, `render`, `startRun`, `pick`, `SAVE`, `setSave`, `setDate`, `checkQuests`, `R3`, ...). Keep that hook working.
 
 ## Roadmap (next up first)
 1. ~~Quests and end screen~~ (done).
-2. Installable PWA (manifest, icon, service worker for offline).
+2. ~~Installable PWA~~ (done).
 3. Biomes for Ironfield and Ashlands: their own enemy families and 4 bosses each.
 4. Artifacts from chests (damage-type families, behavior changers), a crew slot, module evolutions (level 10 unlocks a stronger relative), alternate chassis.
 5. Online leaderboard (needs a backend), later.
