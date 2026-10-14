@@ -9,6 +9,7 @@ Mobile-first 3D tank roguelike in ONE file: `index.html` (inline CSS and JS, ins
 - **Progress lives in localStorage** under key `scrapjaw-v1` (`SAVE` object). Never break old saves: add fields with defaults in `loadSave()`.
 
 ## Code map (search for these section comments in index.html)
+- Biomes: a map can have `fam` (Greenvale role → its own enemy/neutral type) and `bosses`. `famType()` swaps in the family at spawn time: `FAM_MIX` (80%) of hostiles, and all neutrals. Family types carry `base` (the role they replace), so eating rules, quest stats (`G.rs`) and the 2D fallback follow the base. Ironfield = the Foundry (`rivet`, `spark`, `crawler`, `boiler`, `stack`, `hauler`, plus `shed`/`orecart`/`bunker`) with bosses `ox`, `crane`, `anvil`, `duke` (and its `dukecar` gun cars). Shared hazards are `G.hazards` (burning pools), `G.clouds` (steam, slows) and `G.waves` (shockwave rings with gaps). Ashlands is next.
 - `definitions`: `MODS` (player modules), `AB` (each module's special ability: name, cooldown, and `v(m,pow)` for its power value), `EN` (enemies, neutrals, bosses), `WAVES`, `MAPS` (difficulty multipliers and 3D palette `pal`), `CAPS` (captains), `MOD_COST`, `RAR` (card rarities).
 - `quests` (right after `definitions`): `DAILY` and `MILESTONES` tables (`m` = metric from `runStats()`, `run:1` = best single run, otherwise runs add up). `ensureDaily()` picks 3 dailies from a hash of the local date. `checkQuests(live)` completes and pays quests, and shows a `#toast` during a run. `foldRun()` adds a finished run into `SAVE.daily`/`SAVE.ms`. `snapshotRun()` (when the app is hidden) and `recoverRun()` (on load) keep progress if the app is killed. Modules in `QUEST_MODS` (Turret Layer) unlock only through a milestone.
 - `state`: `newGame()` builds `G` (the whole run state), and `newPlayer()` builds `G.p`. `G.rs` counts what was eaten and killed per type (`on` only during a real run). `G.qDone` lists the quests finished this run.
@@ -34,6 +35,6 @@ Mobile-first 3D tank roguelike in ONE file: `index.html` (inline CSS and JS, ins
 ## Roadmap (next up first)
 1. ~~Quests and end screen~~ (done).
 2. ~~Installable PWA~~ (done).
-3. Biomes for Ironfield and Ashlands: their own enemy families and 4 bosses each.
+3. Biomes: ~~Ironfield~~ (done). Ashlands is next: the Cinder Clans (Ash Walker, Cinder Bike, Scorpion Tank, Magma Roller, Obsidian Spire, Behemoth Crawler) and the bosses Cinder Wyrm, Ash Prophet, Twin Kilns and The Caldera (concepts approved 2026-10-14).
 4. Artifacts from chests (damage-type families, behavior changers), a crew slot, module evolutions (level 10 unlocks a stronger relative), alternate chassis.
 5. Online leaderboard (needs a backend), later.

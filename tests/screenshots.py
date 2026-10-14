@@ -29,6 +29,14 @@ async def main():
         await pg.wait_for_timeout(500);await pg.screenshot(path=str(ROOT/'shots/clear_choice.png'))
         await pg.evaluate("()=>{__api.pick(1);__ff(40);__api.setMode('play');}");await pg.wait_for_timeout(1200);await pg.screenshot(path=str(ROOT/'shots/overtime.png'))
         await pg.evaluate("()=>{if(__api.mode!=='play'){__api.setMode('play');}__api.endRun(false);}");await pg.wait_for_timeout(1300);await pg.screenshot(path=str(ROOT/'shots/over.png'))
+        # Ironfield: the Foundry family, then each boss mid-fight
+        await pg.evaluate("()=>{const a=__api;a.SAVE.maps.push('iron');a.SAVE.selMap='iron';a.startRun();__ff(45);a.setMode('play');}")
+        await pg.wait_for_timeout(400);await pg.screenshot(path=str(ROOT/'shots/iron_play.png'))
+        for st,name,secs in [(1,'ox',4.6),(2,'crane',4.2),(3,'anvil',5.6),(4,'duke',5)]:
+            await pg.evaluate(f"""()=>{{const a=__api,G=a.G;a.setMode('play');G.ents=G.ents.filter(e=>e.d.neutral);G.boss=null;G.stage={st};G.stageT=74.9;G.bossSpawned=false;G.p.rank={st}-1;
+              for(let i=0;i<60*{secs};i++){{if(a.mode!=='play'){{a.pick(0);a.setMode('play');}}a.joy.dx=Math.cos(i/50);a.joy.dy=Math.sin(i/40);a.update(1/60);G.p.hp=G.p.maxHp;}}
+              if(G.boss){{G.cam.x=(G.boss.x+G.p.x)/2;G.cam.y=(G.boss.y+G.p.y)/2;}}}}""")
+            await pg.wait_for_timeout(500);await pg.screenshot(path=str(ROOT/f'shots/iron_{name}.png'))
         print('page errors:',errs or 'none')
         await b.close()
 asyncio.run(main())
