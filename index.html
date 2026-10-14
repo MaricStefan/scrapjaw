@@ -440,6 +440,8 @@ const WAVES=[null,
 const TYPE_CAP={tank:4,tower:2,heavy:1,bomber:4}; // most alive at once on Greenvale; harder maps scale with their cap
 const GARRISON_P=0.25,GARRISON_R=240; // share of huts/depots hiding soldiers; how close you get before they burst out
 const SWARM_AT=55,SWARM_LEN=12;     // stage seconds: a rush of weak, fast enemies shortly before the boss
+// healing is flat and grows with each boss killed, so lean fast tanks get relatively more out of it than bulky ones
+const CRATE_HEAL=[30,25],CART_HEAL=[45,35];
 const BOSS_AT=75, OT_PAY=30; // Overtime (after the last boss) pays silver every OT_PAY seconds
 const RAR={c:{name:'Common',col:'var(--bronze)',k:1},r:{name:'Rare',col:'var(--silver)',k:1.6},e:{name:'Epic',col:'var(--gold)',k:2.5},
   n:{name:'New module',col:'var(--teal)'},b:{name:'Rank up',col:'var(--gold)'},
@@ -1445,12 +1447,12 @@ function update(dt){
   G.pick=G.pick.filter(k=>!k.got);
   if(G.pick.length>300)G.pick.splice(0,G.pick.length-300);
   // crates
-  for(const c of G.crates){if(Math.hypot(p.x-c.x,p.y-c.y)<p.r+16){c.got=true;const h=p.maxHp*0.25;p.hp=Math.min(p.maxHp,p.hp+h);addText(p.x,p.y-p.r-10,'+'+Math.round(h)+' HP','#7be37b');parts(c.x,c.y,10,'#ffffff',150,4,0.5);sfx('heal');buzz(10);}}
+  for(const c of G.crates){if(Math.hypot(p.x-c.x,p.y-c.y)<p.r+16){c.got=true;const h=CRATE_HEAL[0]+CRATE_HEAL[1]*G.bossKills;p.hp=Math.min(p.maxHp,p.hp+h);addText(p.x,p.y-p.r-10,'+'+Math.round(h)+' HP','#7be37b');parts(c.x,c.y,10,'#ffffff',150,4,0.5);sfx('heal');buzz(10);}}
   G.crates=G.crates.filter(c=>!c.got);
   for(const dr of G.drops){dr.life-=dt;
     if(Math.hypot(p.x-dr.x,p.y-dr.y)<p.r+20){dr.life=0;
       if(dr.kind==='magnet'){for(const k of G.pick)k.vac=true;sfx('magnet');buzz(20);banner('Magnet','Every scrap on the map is flying to you.');}
-      else{const h=p.maxHp*0.4;p.hp=Math.min(p.maxHp,p.hp+h);addText(p.x,p.y-p.r-10,'+'+Math.round(h)+' HP','#7be37b');sfx('heal');buzz(20);banner('Repaired','+'+Math.round(h)+' HP');}
+      else{const h=CART_HEAL[0]+CART_HEAL[1]*G.bossKills;p.hp=Math.min(p.maxHp,p.hp+h);addText(p.x,p.y-p.r-10,'+'+Math.round(h)+' HP','#7be37b');sfx('heal');buzz(20);banner('Repaired','+'+Math.round(h)+' HP');}
       parts(dr.x,dr.y,14,dr.kind==='magnet'?'#9fd0ff':'#7be37b',200,5,0.6);}}
   G.drops=G.drops.filter(d_=>d_.life>0);
   // fx
