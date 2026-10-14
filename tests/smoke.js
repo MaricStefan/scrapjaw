@@ -114,6 +114,12 @@ run('iron','lou',true);run('ash','ida',true);run('ash','sid',false);run('iron','
 // --- health crates heal a flat amount that grows per boss killed ---
 {api.SAVE.selMap='dust';api.startRun();const G=api.G,P=G.p;const heal=()=>{P.hp=1;G.crates=[{x:P.x,y:P.y}];api.update(1/60);return Math.round(P.hp-1);};
  const h0=heal();G.bossKills=2;P.maxHp=500;const h2=heal();assert.strictEqual(h0,30);assert.strictEqual(h2,80,'crate heals 30 + 25 per boss');console.log('crates ok:',h0,h2);api.endRun('quit');}
+// --- bulk: upgrades make the tank bigger and slower; engine sheds bulk ---
+{api.SAVE.selMap='dust';api.startRun();const G=api.G,P=G.p;api.update(1/60);const r0=P.r;
+ for(let i=0;i<10;i++){G.lvQ.push(P.level+1+i);}api.update(1/60);let picks=0;while(api.mode==='level'&&picks<20){api.pick(0);picks++;}
+ api.setMode('play');api.update(1/60);assert.ok(P.bulk>0&&P.r>r0,'upgrades add bulk: '+P.bulk.toFixed(2)+' r '+P.r.toFixed(1));
+ const b0=P.bulk;P.bulk=10;api.update(1/60);const rBig=P.r;P.bulk=b0;assert.ok(rBig>r0+5,'bulk grows the hull');
+ console.log('bulk ok: bulk',P.bulk.toFixed(2),'radius',r0,'->',P.r.toFixed(1));api.endRun('quit');}
 // --- ranged and static enemies can't pile up (per-type caps) ---
 {api.SAVE.selMap='dust';api.startRun();const G=api.G,P=G.p;G.stage=2;let maxT=0,maxW=0;
  for(let i=0;i<60*120;i++){if(api.mode==='play'){api.joy.dx=0;api.joy.dy=0;api.update(1/60);P.hp=P.maxHp;if(G.boss)G.boss=null,G.bossSpawned=true;

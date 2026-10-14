@@ -442,6 +442,9 @@ const GARRISON_P=0.25,GARRISON_R=240; // share of huts/depots hiding soldiers; h
 const SWARM_AT=55,SWARM_LEN=12;     // stage seconds: a rush of weak, fast enemies shortly before the boss
 // healing is flat and grows with each boss killed, so lean fast tanks get relatively more out of it than bulky ones
 const CRATE_HEAL=[30,25],CART_HEAL=[45,35];
+// bulk: upgrades make the tank bigger (easier to hit) and a little slower; engine upgrades shed some
+const BULK={module:1.2,card:0.25,armorCard:0.7,engineCard:-0.4,armorBoss:2.5,engineBoss:-1.5};
+const tankR=(rank,bulk)=>20+rank*7+bulk*0.75, bulkSlow=b=>Math.max(0.75,1-b*0.008);
 const BOSS_AT=75, OT_PAY=30; // Overtime (after the last boss) pays silver every OT_PAY seconds
 const RAR={c:{name:'Common',col:'var(--bronze)',k:1},r:{name:'Rare',col:'var(--silver)',k:1.6},e:{name:'Epic',col:'var(--gold)',k:2.5},
   n:{name:'New module',col:'var(--teal)'},b:{name:'Rank up',col:'var(--gold)'},
@@ -559,7 +562,7 @@ recoverRun();
 let G=null, mode='title';
 function newPlayer(){
   return {x:WORLD/2,y:WORLD/2,a:-Math.PI/2,v:0,hp:120,maxHp:120,rank:0,r:20,baseSpeed:175,spdMult:1,turn:3.1,turnMult:1,
-    ramDmg:28,magnet:95,gunO:0,armor:0,level:1,xp:0,xpNext:6,nitro:0,nitroCd:0,nitroMax:7,hurt:0,odo:0,turA:0,
+    ramDmg:28,magnet:95,gunO:0,bulk:0,armor:0,level:1,xp:0,xpNext:6,nitro:0,nitroCd:0,nitroMax:7,hurt:0,odo:0,turA:0,
     modules:{front:mkMod('cannon'),side:null,back:null,top:null},kills:0,eaten:0,iframes:0,rerolls:2,wdm:1,taken:1,luck:0,silverMult:1,totalXp:0};
 }
 function mkMod(id,wdm){const d=MODS[id];return {id,lvl:1,dmg:d.dmg*(wdm||1),cd:d.cd,range:d.range||0,radius:d.radius||0,shots:1,extra:1,t:0,act:0,ab:{cd:AB[id].cd,t:0,pow:0}};}
@@ -1047,8 +1050,8 @@ function openBossReward(){
     return;}
   mode='boss';
   const cards=[
-    {rar:'b',t:'Armor plating',icon:'armor',stats:[['max HP',r1(p.maxHp),r1(p.maxHp+40)],['hull',r1(p.hp),r1(Math.min(p.maxHp+40,p.hp+(p.maxHp+40)*0.4))]],ap:()=>{p.maxHp+=40;p.hp=Math.min(p.maxHp,p.hp+p.maxHp*0.4);}},
-    {rar:'b',t:'Engine overhaul',icon:'engine',stats:[['top speed',r1(p.baseSpeed*p.spdMult),r1(p.baseSpeed*p.spdMult*1.12)],['turning',(p.turn*p.turnMult).toFixed(1),(p.turn*p.turnMult*1.15).toFixed(1)]],ap:()=>{p.spdMult*=1.12;p.turnMult*=1.15;}},
+    {rar:'b',t:'Armor plating',icon:'armor',stats:[['max HP',r1(p.maxHp),r1(p.maxHp+40)],['hull',r1(p.hp),r1(Math.min(p.maxHp+40,p.hp+(p.maxHp+40)*0.4))],['tank size',r1(tankR(newRank,p.bulk)),r1(tankR(newRank,p.bulk+BULK.armorBoss))]],ap:()=>{p.maxHp+=40;p.hp=Math.min(p.maxHp,p.hp+p.maxHp*0.4);p.bulk+=BULK.armorBoss;}},
+    {rar:'b',t:'Engine overhaul',icon:'engine',stats:[['top speed',r1(p.baseSpeed*p.spdMult),r1(p.baseSpeed*p.spdMult*1.12)],['turning',(p.turn*p.turnMult).toFixed(1),(p.turn*p.turnMult*1.15).toFixed(1)],['tank size',r1(tankR(newRank,p.bulk)),r1(tankR(newRank,Math.max(0,p.bulk+BULK.engineBoss)))]],ap:()=>{p.spdMult*=1.12;p.turnMult*=1.15;p.bulk=Math.max(0,p.bulk+BULK.engineBoss);}},
   ];
   showCards('Fortress destroyed','Your tank grows to rank '+newRank+'. You can now devour '+RANK_EATS[newRank]+'.',cards,c=>{
     c.ap();p.rank=newRank;sfx('level');G.stage++;G.stageT=0;G.bossSpawned=false;G.bossT=0;
@@ -1104,20 +1107,20 @@ function upgradePool(){
     if(m.id==='turret'&&m.shots<3)L.push({fix:1,t:nm,icon:ic,s:()=>[['barrels',m.shots,m.shots+1]],ap:()=>{m.shots++;m.lvl++;}});
     if(m.id==='tesla'&&m.extra<6)L.push({fix:1,t:nm,icon:ic,s:()=>[['targets hit',m.extra+2,m.extra+3]],ap:()=>{m.extra++;m.lvl++;}});
   }
-  L.push({t:'Thicker armor',icon:'hp',s:k=>[['max HP',r1(p.maxHp),r1(p.maxHp+20*k)]],ap:k=>{p.maxHp+=20*k;p.hp+=20*k;}});
-  L.push({t:'Tuned engine',icon:'speed',s:k=>{const v=p.baseSpeed*p.spdMult;return [['top speed',r1(v),r1(v*(1+0.08*k))]];},ap:k=>{p.spdMult*=1+0.08*k;}});
-  L.push({t:'Scrap magnet',icon:'magnet',s:k=>[['pickup range',r1(p.magnet),r1(p.magnet*(1+0.35*k))]],ap:k=>{p.magnet*=1+0.35*k;}});
-  if(p.armor<0.5)L.push({t:'Reactive armor',icon:'armor',s:k=>[['damage blocked',r1(p.armor*100)+'%',r1(Math.min(50,(p.armor+0.06*k)*100))+'%']],ap:k=>{p.armor=Math.min(0.5,p.armor+0.06*k);}});
+  L.push({bulk:BULK.armorCard,t:'Thicker armor',icon:'hp',s:k=>[['max HP',r1(p.maxHp),r1(p.maxHp+20*k)]],ap:k=>{p.maxHp+=20*k;p.hp+=20*k;}});
+  L.push({bulk:BULK.engineCard,t:'Tuned engine',icon:'speed',s:k=>{const v=p.baseSpeed*p.spdMult;return [['top speed',r1(v),r1(v*(1+0.08*k))]];},ap:k=>{p.spdMult*=1+0.08*k;}});
+  L.push({bulk:0,t:'Scrap magnet',icon:'magnet',s:k=>[['pickup range',r1(p.magnet),r1(p.magnet*(1+0.35*k))]],ap:k=>{p.magnet*=1+0.35*k;}});
+  if(p.armor<0.5)L.push({bulk:BULK.armorCard*0.6,t:'Reactive armor',icon:'armor',s:k=>[['damage blocked',r1(p.armor*100)+'%',r1(Math.min(50,(p.armor+0.06*k)*100))+'%']],ap:k=>{p.armor=Math.min(0.5,p.armor+0.06*k);}});
   L.push({t:'Ram spikes',icon:'ram',s:k=>[['ramming damage',r1(p.ramDmg),r1(p.ramDmg*(1+0.25*k))]],ap:k=>{p.ramDmg*=1+0.25*k;}});
-  L.push({t:'Bigger nitro tank',icon:'nitro',s:k=>[['Boost cooldown',s1(p.nitroMax),s1(p.nitroMax/(1+0.12*k))]],ap:k=>{p.nitroMax*=1/(1+0.12*k);}});
-  if(p.hp<p.maxHp*0.8)L.push({t:'Field repair',icon:'repair',s:k=>[['hull',r1(p.hp),r1(Math.min(p.maxHp,p.hp+p.maxHp*0.3*k))]],ap:k=>{p.hp=Math.min(p.maxHp,p.hp+p.maxHp*0.3*k);}});
+  L.push({bulk:0,t:'Bigger nitro tank',icon:'nitro',s:k=>[['Boost cooldown',s1(p.nitroMax),s1(p.nitroMax/(1+0.12*k))]],ap:k=>{p.nitroMax*=1/(1+0.12*k);}});
+  if(p.hp<p.maxHp*0.8)L.push({bulk:0,t:'Field repair',icon:'repair',s:k=>[['hull',r1(p.hp),r1(Math.min(p.maxHp,p.hp+p.maxHp*0.3*k))]],ap:k=>{p.hp=Math.min(p.maxHp,p.hp+p.maxHp*0.3*k);}});
   return L;
 }
 function makeUpgradeCards(){
   const pool=upgradePool();const out=[];
   while(out.length<3&&pool.length){const i=Math.floor(Math.random()*pool.length);const u=pool.splice(i,1)[0];
     const rar=u.fix?(Math.random()<0.25?'e':'r'):rollRar();const k=RAR[rar].k;
-    out.push({rar,t:u.t,icon:u.icon,stats:u.s(k),ap:()=>u.ap(k)});}
+    out.push({rar,t:u.t,icon:u.icon,stats:u.s(k),ap:()=>{u.ap(k);G.p.bulk=Math.max(0,G.p.bulk+(u.bulk===undefined?BULK.card:u.bulk));}});}
   return out;
 }
 function makeModuleCards(){
@@ -1125,7 +1128,7 @@ function makeModuleCards(){
   for(const id in MODS){const d=MODS[id];if(!p.modules[d.slot]&&modUnlocked(id))opts.push(id);}
   const out=[];
   while(out.length<3&&opts.length){const id=opts.splice(Math.floor(Math.random()*opts.length),1)[0];const d=MODS[id];
-    out.push({rar:'n',t:d.name,icon:id,desc:d.desc+' Mounts on the '+SLOT_NAME[d.slot].toLowerCase()+'. Ability: '+AB[id].name+'.',ap:()=>{p.modules[d.slot]=mkMod(id,p.wdm);if(id==='drone')G.drones.length=0;}});}
+    out.push({rar:'n',t:d.name,icon:id,desc:d.desc+' Mounts on the '+SLOT_NAME[d.slot].toLowerCase()+'. Ability: '+AB[id].name+'.',ap:()=>{p.bulk+=BULK.module;p.modules[d.slot]=mkMod(id,p.wdm);if(id==='drone')G.drones.length=0;}});}
   return out;
 }
 let curLevel=0;
@@ -1332,7 +1335,7 @@ function update(dt){
   let ix=joy.dx,iy=joy.dy;
   if(keys.w||keys.arrowup)iy-=1;if(keys.s||keys.arrowdown)iy+=1;if(keys.a||keys.arrowleft)ix-=1;if(keys.d||keys.arrowright)ix+=1;
   const mag=Math.hypot(ix,iy);
-  const maxSp=p.baseSpeed*p.spdMult*(1-p.rank*0.03)*(p.nitro>0?1.75:1)*(p.steamed?0.65:1);
+  const maxSp=p.baseSpeed*p.spdMult*(1-p.rank*0.03)*bulkSlow(p.bulk)*(p.nitro>0?1.75:1)*(p.steamed?0.65:1);
   let target=0;
   if(mag>0.15){const ta=Math.atan2(iy,ix);const df=angDiff(p.a,ta);const tr=p.turn*p.turnMult*dt*(p.nitro>0?0.75:1);
     p.a+=clamp(df,-tr,tr);target=maxSp*Math.min(1,mag)*Math.max(0.3,Math.cos(df));}
@@ -1340,7 +1343,7 @@ function update(dt){
   p.v+=clamp(target-p.v,-520*dt,(p.nitro>0?900:360)*dt);
   p.x+=Math.cos(p.a)*p.v*dt;p.y+=Math.sin(p.a)*p.v*dt;
   p.odo+=Math.abs(p.v)*dt;
-  p.r=20+p.rank*7;
+  p.r=tankR(p.rank,p.bulk);
   p.nitro-=dt;p.nitroCd-=dt;p.ccd=(p.ccd||0)-dt;p.recoil=Math.max(0,(p.recoil||0)-dt*6);p.chomp=Math.max(0,(p.chomp||0)-dt*5);G.comboT-=dt;p.hurt-=dt;p.iframes-=dt;
   if(p.nitro>0)parts(p.x-Math.cos(p.a)*p.r*1.2,p.y-Math.sin(p.a)*p.r*1.2,1,'#ff9b2e',80,6,0.3);
   // tracks
@@ -1393,9 +1396,9 @@ function update(dt){
     }
     if(d.trail&&(!e.lt||Math.hypot(e.x-e.lt.x,e.y-e.lt.y)>e.r*0.9)){e.lt={x:e.x,y:e.y};G.tracks.push({x:e.x,y:e.y,a:e.a,r:e.r,life:25});if(G.tracks.length>600)G.tracks.shift();}
     e.ta=Math.atan2(dy,dx);
-    if(d.shoot&&dist<d.shoot.range&&!(e.stun>0)){e.t-=dt;if(e.t<=0){e.t=d.shoot.cd*rnd(0.85,1.2);const n=d.shoot.n;
-      const sc=1+(G.stage-1)*0.25;
-      for(let i=0;i<n;i++)eshoot(e.x+Math.cos(e.ta)*e.r,e.y+Math.sin(e.ta)*e.r,e.ta+(i-(n-1)/2)*(d.shoot.spread||0.2),d.shoot.spd,d.shoot.dmg*sc);}}
+    if(d.shoot&&dist<d.shoot.range&&!(e.stun>0)){e.t-=dt;if(e.t<=0){e.t=d.shoot.cd*rnd(0.85,1.2);const n=d.shoot.n+(G.stage>=3?1:0); // later stages fire more and wider shots rather than much harder ones
+      const sc=1+(G.stage-1)*0.08,spr=(d.shoot.spread||0.2)*(1+0.2*(G.stage-1));
+      for(let i=0;i<n;i++)eshoot(e.x+Math.cos(e.ta)*e.r,e.y+Math.sin(e.ta)*e.r,e.ta+(i-(n-1)/2)*spr,d.shoot.spd,d.shoot.dmg*sc);}}
     if(d.lob&&dist<400&&!(e.stun>0)){e.t-=dt;if(e.t<=0&&G.strikes.filter(s_=>s_.lob).length>=4)e.t=0.5; // at most 4 shells in the air
       if(e.t<=0){e.t=d.lob.cd*rnd(0.9,1.25);const lead=rnd(0.3,0.8); // lands roughly where you're heading
       G.strikes.push({x:p.x+Math.cos(p.a)*p.v*lead+rnd(-45,45),y:p.y+Math.sin(p.a)*p.v*lead+rnd(-45,45),t:1.1,max:1.1,r:d.lob.r,dmg:d.lob.dmg*(1+(G.stage-1)*0.25),lob:1});
