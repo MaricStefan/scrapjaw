@@ -8,7 +8,12 @@ async def main():
     os.makedirs(ROOT/'shots',exist_ok=True)
     async with async_playwright() as p:
         b=await p.chromium.launch(args=['--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader','--ignore-gpu-blocklist'])
-        pg=await b.new_page(viewport={'width':390,'height':844},device_scale_factor=2)
+        # phone held upright: only the "turn your phone" prompt
+        up=await b.new_page(viewport={'width':390,'height':844},device_scale_factor=2,is_mobile=True,has_touch=True)
+        await up.route('**/three.min.js',lambda r:r.fulfill(body=THREE,content_type='application/javascript'))
+        await up.goto((ROOT/'index.html').as_uri());await up.wait_for_timeout(500);await up.screenshot(path=str(ROOT/'shots/rotate.png'));await up.close()
+        # the game is played on a phone in landscape
+        pg=await b.new_page(viewport={'width':844,'height':390},device_scale_factor=2,is_mobile=True,has_touch=True)
         errs=[];pg.on('pageerror',lambda e:errs.append(str(e)))
         await pg.add_init_script("window.__SJ_TEST=a=>window.__api=a")
         await pg.route('**/three.min.js',lambda r:r.fulfill(body=THREE,content_type='application/javascript'))

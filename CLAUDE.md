@@ -5,7 +5,7 @@ Mobile-first 3D tank roguelike in ONE file: `index.html` (inline CSS and JS, ins
 ## Hard rules
 - **No external assets.** All models are built from three.js primitives, and all audio is synthesized with WebAudio. The only external scripts are three.js **r128** from cdnjs (pinned) and Google Fonts (Black Ops One, Barlow Condensed).
 - **Original work only.** The game is *inspired by* Wanderburg (Randwerk). Never copy its assets, names, UI art or text. Mechanics and style may be similar; content must be ours.
-- **Mobile first.** Touch joystick anywhere, Boost button bottom-right, safe-area insets, 60fps on mid-range phones. Keep draw calls low: use InstancedMesh for anything numerous.
+- **Mobile first, landscape.** Phones play in landscape: if one is held upright, a `#rotate` prompt covers the game and pauses it, and on Android, Play goes fullscreen and locks landscape. The phone layout lives in `@media (orientation:landscape) and (max-height:560px)`: steering thumb on the left (joystick anywhere), hull bars top-left, timer/boss bar top-right, ability slots and Boost bottom-right. Desktop keeps the original layout. Use safe-area insets, aim for 60fps on mid-range phones, and check screenshots at 844×390. Keep draw calls low: use InstancedMesh for anything numerous.
 - **Progress lives in localStorage** under key `scrapjaw-v1` (`SAVE` object). Never break old saves: add fields with defaults in `loadSave()`.
 
 ## Code map (search for these section comments in index.html)
