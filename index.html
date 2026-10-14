@@ -308,6 +308,8 @@ button:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
         <h3>Daily quests</h3><p class="note" id="dailyNote"></p><div id="dailyList"></div>
         <h3>Battlefield</h3><p class="note">Clear all four bosses in one run to unlock the next one.</p><div id="mapList"></div>
         <h3>Captain</h3><p class="note">Each captain has a perk and a drawback.</p><div id="capList"></div>
+        <h3>Crew</h3><p class="note">One crew member rides along: a perk, no drawback.</p><div id="crewList"></div>
+        <h3>Chassis</h3><p class="note">The tank body you roll out in.</p><div id="chassisList"></div>
         </div><div class="gcol">
         <h3>Workshop</h3><p class="note">You always have Main Gun, Broadside, Mine Dropper and Auto Turret. Buying anything in a category opens its next tier.</p><div id="modList"></div>
         <h3>Milestones</h3><p class="note">Permanent goals. Some unlock new gear.</p><div id="msList"></div>
@@ -524,6 +526,21 @@ const ARTIFACTS={
   goldtooth: {name:'Gold Tooth',desc:'+20% silver from this run.',icon:'tooth',ap:p=>{p.silverMult*=1.2;}},
 };
 const hasArt=id=>!!(G&&G.arts&&G.arts.includes(id));
+// crew: one per run, a perk with no drawback. chassis: the tank body (rMul scales the hull radius)
+const CREW=[
+  {id:'',name:'No crew',perk:'Just you and the tank.',cost:0},
+  {id:'mechanic',name:'Mechanic',perk:'Repairs 1.5 hull per second once you have not been hit for 5 seconds.',cost:300},
+  {id:'loader',name:'Loader',perk:'Weapons reload 10% faster.',cost:350},
+  {id:'spotter',name:'Spotter',perk:'+15% weapon range.',cost:350},
+  {id:'cook',name:'Cook',perk:'Health crates heal 30% more.',cost:300},
+  {id:'scrounger',name:'Scrounger',perk:'+15% gold from everything.',cost:400},
+];
+const CHASSIS=[
+  {id:'standard',name:'Standard',perk:'Balanced hull.',cost:0,ap:p=>{}},
+  {id:'scout',name:'Scout',perk:'25% less HP, 20% faster, smaller hull.',cost:600,ap:p=>{p.maxHp=Math.round(p.maxHp*0.75);p.hp=p.maxHp;p.spdMult*=1.2;p.rMul=0.85;}},
+  {id:'bulwark',name:'Bulwark',perk:'40% more HP, 15% slower, starts bulky.',cost:800,ap:p=>{p.maxHp=Math.round(p.maxHp*1.4);p.hp=p.maxHp;p.spdMult*=0.85;p.bulk+=4;p.rMul=1.08;}},
+];
+const hasCrew=id=>!!(G&&G.crew===id);
 // workshop: owning any item in a category opens its tier 2, owning three opens tier 3. mod = a module unlock, the rest are permanent perks
 const WORKSHOP=[
   {id:'guns',name:'Guns',items:[
@@ -597,6 +614,8 @@ function loadSave(){const s=store.get();s.silver=s.silver||0;s.mods=s.mods||[];s
   const d=s.daily||{};s.daily={date:typeof d.date==='string'?d.date:'',ids:Array.isArray(d.ids)?d.ids:[],prog:d.prog||{},done:d.done||{}};
   const ms=s.ms||{};s.ms={prog:ms.prog||{},done:ms.done||{}};
   s.perks=Array.isArray(s.perks)?s.perks:[];
+  s.crew=Array.isArray(s.crew)?s.crew:[];s.selCrew=s.crew.includes(s.selCrew)?s.selCrew:'';
+  s.chassis=Array.isArray(s.chassis)?s.chassis:['standard'];s.selChassis=s.chassis.includes(s.selChassis)?s.selChassis:'standard';
   return s;}
 let SAVE=loadSave();
 function persist(){store.set(SAVE);}
@@ -655,16 +674,18 @@ recoverRun();
 let G=null, mode='title';
 function newPlayer(){
   return {x:WORLD/2,y:WORLD/2,a:-Math.PI/2,v:0,hp:120,maxHp:120,rank:0,r:20,baseSpeed:175,spdMult:1,turn:3.1,turnMult:1,
-    ramDmg:28,magnet:95,gunO:0,bulk:0,armor:0,level:1,xp:0,xpNext:6,nitro:0,nitroCd:0,nitroMax:7,hurt:0,odo:0,turA:0,
+    ramDmg:28,magnet:95,gunO:0,bulk:0,rMul:1,chassis:'standard',hitT:0,armor:0,level:1,xp:0,xpNext:6,nitro:0,nitroCd:0,nitroMax:7,hurt:0,odo:0,turA:0,
     modules:{front:mkMod('cannon'),side:null,back:null,top:null},kills:0,eaten:0,iframes:0,rerolls:2,wdm:1,taken:1,luck:0,silverMult:1,totalXp:0};
 }
-function mkMod(id,wdm){const d=MODS[id];return {id,lvl:1,dmg:d.dmg*(wdm||1),cd:d.cd*(hasPerk('loaders')?0.92:1),range:d.range||0,radius:d.radius||0,shots:1,extra:1,t:0,act:0,ab:{cd:AB[id].cd,t:0,pow:0}};}
+function mkMod(id,wdm){const d=MODS[id];return {id,lvl:1,dmg:d.dmg*(wdm||1),cd:d.cd*(hasPerk('loaders')?0.92:1)*(hasCrew('loader')?0.9:1),range:(d.range||0)*(hasCrew('spotter')?1.15:1),radius:d.radius||0,shots:1,extra:1,t:0,act:0,ab:{cd:AB[id].cd,t:0,pow:0}};}
 function newGame(mapId,capId){
   const mapDef=MAPS.find(m=>m.id===(mapId||SAVE.selMap))||MAPS[0];const cap=CAPS.find(c=>c.id===(capId||SAVE.selCap))||CAPS[0];
-  const P=newPlayer();cap.ap(P);applyPerks(P);P.modules.front=mkMod('cannon',P.wdm);if(hasPerk('twinmounts'))P.modules.side=mkMod('broadside',P.wdm);
+  const P=newPlayer();cap.ap(P);applyPerks(P);
+  const ch=CHASSIS.find(c=>c.id===SAVE.selChassis)||CHASSIS[0];P.chassis=ch.id;ch.ap(P);G={crew:SAVE.selCrew}; // provisional, so mkMod sees the crew
+  P.modules.front=mkMod('cannon',P.wdm);if(hasPerk('twinmounts'))P.modules.side=mkMod('broadside',P.wdm);
   G={t:0,stage:1,stageT:0,boss:null,bossSpawned:false,bossT:0,overtime:false,cleared:false,otT:0,otNext:OT_PAY,otSilver:0,unlockMsg:'',droneOD:0,burns:[],spawnT:1.5,crateT:22,mortarT:2,neutT:0,
     ents:[],pb:[],eb:[],mines:[],pick:[],parts:[],texts:[],strikes:[],bolts:[],drones:[],crates:[],tracks:[],drops:[],fires:[],helperT:38,helperN:0,rings:[],decals:[],flash:0,redflash:0,hitstop:0,combo:0,comboT:0,
-    p:P,mapDef,cap,bossKills:0,lvQ:[],shake:0,cam:{x:WORLD/2,y:WORLD/2},
+    p:P,mapDef,cap,crew:SAVE.selCrew,bossKills:0,lvQ:[],shake:0,cam:{x:WORLD/2,y:WORLD/2},
     sentries:[],hazards:[],mastQ:[],arts:[],chests:[],chestT:rnd(20,40),clouds:[],waves:[],rs:{on:false,eat:{},kill:{}},qDone:[],qT:0.5};
   for(let i=0;i<75;i++)spawnNeutral(true);
   if(R3.on)setupWorld(G.mapDef);
@@ -894,12 +915,13 @@ function explode(x,y,rad,dmg,hitsPlayer,hitsEnemies){
 }
 function dmgPlayer(n){
   const p=G.p;if(p.iframes>0||mode!=='play')return;
-  n*=(1-p.armor)*p.taken*G.mapDef.dmg;p.hp-=n;p.hurt=0.15;sfx('hurt');buzz(n>15?45:25);G.redflash=Math.min(0.5,G.redflash+0.12+n/90);G.shake=Math.min(12,G.shake+n*0.35);
+  n*=(1-p.armor)*p.taken*G.mapDef.dmg;p.hp-=n;p.hitT=G.t;p.hurt=0.15;sfx('hurt');buzz(n>15?45:25);G.redflash=Math.min(0.5,G.redflash+0.12+n/90);G.shake=Math.min(12,G.shake+n*0.35);
   if(p.hp<=0){
     if(hasPerk('secondwind')&&!G.secondWind){G.secondWind=true;p.hp=p.maxHp*0.3;p.iframes=1.5;banner('Second Wind','Your hull holds. Barely.');sfx('heal');buzz([40,30,40]);return;}
     p.hp=0;endRun(false);}
 }
 function gainXp(n){
+  if(hasCrew('scrounger'))n*=1.15;
   const p=G.p;p.xp+=n;p.totalXp+=n;
   while(p.xp>=p.xpNext){p.xp-=p.xpNext;p.level++;p.xpNext=Math.round(p.xpNext*1.2+4);G.lvQ.push(p.level);}
 }
@@ -1211,8 +1233,8 @@ function openBossReward(){
     return;}
   mode='boss';
   const cards=[
-    {rar:'b',t:'Armor plating',icon:'armor',stats:[['max HP',r1(p.maxHp),r1(p.maxHp+40)],['hull',r1(p.hp),r1(Math.min(p.maxHp+40,p.hp+(p.maxHp+40)*0.4))],['tank size',r1(tankR(newRank,p.bulk)),r1(tankR(newRank,p.bulk+BULK.armorBoss))]],ap:()=>{p.maxHp+=40;p.hp=Math.min(p.maxHp,p.hp+p.maxHp*0.4);p.bulk+=BULK.armorBoss;}},
-    {rar:'b',t:'Engine overhaul',icon:'engine',stats:[['top speed',r1(p.baseSpeed*p.spdMult),r1(p.baseSpeed*p.spdMult*1.12)],['turning',(p.turn*p.turnMult).toFixed(1),(p.turn*p.turnMult*1.15).toFixed(1)],['tank size',r1(tankR(newRank,p.bulk)),r1(tankR(newRank,Math.max(0,p.bulk+BULK.engineBoss)))]],ap:()=>{p.spdMult*=1.12;p.turnMult*=1.15;p.bulk=Math.max(0,p.bulk+BULK.engineBoss);}},
+    {rar:'b',t:'Armor plating',icon:'armor',stats:[['max HP',r1(p.maxHp),r1(p.maxHp+40)],['hull',r1(p.hp),r1(Math.min(p.maxHp+40,p.hp+(p.maxHp+40)*0.4))],['tank size',r1(tankR(newRank,p.bulk)*p.rMul),r1(tankR(newRank,p.bulk+BULK.armorBoss)*p.rMul)]],ap:()=>{p.maxHp+=40;p.hp=Math.min(p.maxHp,p.hp+p.maxHp*0.4);p.bulk+=BULK.armorBoss;}},
+    {rar:'b',t:'Engine overhaul',icon:'engine',stats:[['top speed',r1(p.baseSpeed*p.spdMult),r1(p.baseSpeed*p.spdMult*1.12)],['turning',(p.turn*p.turnMult).toFixed(1),(p.turn*p.turnMult*1.15).toFixed(1)],['tank size',r1(tankR(newRank,p.bulk)*p.rMul),r1(tankR(newRank,Math.max(0,p.bulk+BULK.engineBoss))*p.rMul)]],ap:()=>{p.spdMult*=1.12;p.turnMult*=1.15;p.bulk=Math.max(0,p.bulk+BULK.engineBoss);}},
   ];
   showCards('Fortress destroyed','Your tank grows to rank '+newRank+'. You can now devour '+RANK_EATS[newRank]+'.',cards,c=>{
     c.ap();p.rank=newRank;sfx('level');G.stage++;G.stageT=0;G.bossSpawned=false;G.bossT=0;G.chestT=rnd(20,40);
@@ -1439,6 +1461,16 @@ function renderGarage(){
   MAPS.forEach(m=>{const open=SAVE.maps.includes(m.id);const req=MAPS.find(x=>x.id===m.req);
     ml.appendChild(row(m.name,open?m.desc:'Locked. Clear '+(req?req.name:'')+' to unlock.',{sel:SAVE.selMap===m.id,locked:!open,tag:SAVE.cleared[m.id]?'Cleared':null,
       onSel:open?()=>{SAVE.selMap=m.id;persist();renderGarage();}:null}));});
+  const crl=$('#crewList');crl.innerHTML='';
+  CREW.forEach(c=>{const own=!c.id||SAVE.crew.includes(c.id);
+    crl.appendChild(row(c.name,c.perk,{sel:SAVE.selCrew===c.id,locked:!own,price:own?null:c.cost,
+      onSel:own?()=>{SAVE.selCrew=c.id;persist();renderGarage();}:null,
+      onBuy:()=>{SAVE.silver-=c.cost;SAVE.crew.push(c.id);SAVE.selCrew=c.id;persist();renderGarage();}}));});
+  const chl=$('#chassisList');chl.innerHTML='';
+  CHASSIS.forEach(c=>{const own=SAVE.chassis.includes(c.id);
+    chl.appendChild(row(c.name,c.perk,{sel:SAVE.selChassis===c.id,locked:!own,price:own?null:c.cost,
+      onSel:own?()=>{SAVE.selChassis=c.id;persist();renderGarage();}:null,
+      onBuy:()=>{SAVE.silver-=c.cost;SAVE.chassis.push(c.id);SAVE.selChassis=c.id;persist();renderGarage();}}));});
   const cl=$('#capList');cl.innerHTML='';
   CAPS.forEach(c=>{const own=SAVE.caps.includes(c.id);
     cl.appendChild(row(c.name,c.perk,{sel:SAVE.selCap===c.id,locked:!own,price:own?null:c.cost,
@@ -1535,7 +1567,8 @@ function update(dt){
   p.v+=clamp(target-p.v,-520*dt,(p.nitro>0?900:360)*dt);
   p.x+=Math.cos(p.a)*p.v*dt;p.y+=Math.sin(p.a)*p.v*dt;
   p.odo+=Math.abs(p.v)*dt;
-  p.r=tankR(p.rank,p.bulk);
+  p.r=tankR(p.rank,p.bulk)*p.rMul;
+  if(hasCrew('mechanic')&&G.t-p.hitT>5&&p.hp<p.maxHp)p.hp=Math.min(p.maxHp,p.hp+1.5*dt);
   p.nitro-=dt;p.nitroCd-=dt;p.ccd=(p.ccd||0)-dt;p.recoil=Math.max(0,(p.recoil||0)-dt*6);p.chomp=Math.max(0,(p.chomp||0)-dt*5);G.comboT-=dt;p.hurt-=dt;p.iframes-=dt;
   if(p.nitro>0&&hasArt('nitromines')){p.nmT=(p.nmT||0)-dt;if(p.nmT<=0){p.nmT=0.3;G.mines.push({x:p.x-Math.cos(p.a)*p.r*1.4,y:p.y-Math.sin(p.a)*p.r*1.4,arm:0.3,dmg:35*p.wdm,rad:65,life:12});if(G.mines.length>40)G.mines.shift();}}
   if(p.nitro>0)parts(p.x-Math.cos(p.a)*p.r*1.2,p.y-Math.sin(p.a)*p.r*1.2,1,'#ff9b2e',80,6,0.3);
@@ -1655,7 +1688,7 @@ if(!e.d.stat&&!e.d.boss){e.x+=b.vx*0.012;e.y+=b.vy*0.012;}let bd=b.dmg;if(e.d.ar
   G.pick=G.pick.filter(k=>!k.got);
   if(G.pick.length>300)G.pick.splice(0,G.pick.length-300);
   // crates
-  for(const c of G.crates){if(Math.hypot(p.x-c.x,p.y-c.y)<p.r+16){c.got=true;const h=(CRATE_HEAL[0]+CRATE_HEAL[1]*G.bossKills)*(hasPerk('fieldkit')?1.2:1);p.hp=Math.min(p.maxHp,p.hp+h);addText(p.x,p.y-p.r-10,'+'+Math.round(h)+' HP','#7be37b');parts(c.x,c.y,10,'#ffffff',150,4,0.5);sfx('heal');buzz(10);}}
+  for(const c of G.crates){if(Math.hypot(p.x-c.x,p.y-c.y)<p.r+16){c.got=true;const h=(CRATE_HEAL[0]+CRATE_HEAL[1]*G.bossKills)*(hasPerk('fieldkit')?1.2:1)*(hasCrew('cook')?1.3:1);p.hp=Math.min(p.maxHp,p.hp+h);addText(p.x,p.y-p.r-10,'+'+Math.round(h)+' HP','#7be37b');parts(c.x,c.y,10,'#ffffff',150,4,0.5);sfx('heal');buzz(10);}}
   G.crates=G.crates.filter(c=>!c.got);
   for(const dr of G.drops){dr.life-=dt;
     if(Math.hypot(p.x-dr.x,p.y-dr.y)<p.r+20){dr.life=0;
@@ -2154,10 +2187,13 @@ function buildPlayer3D(p){
   const root=new T.Group(),top=new T.Group(),barrels=new T.Group();
   const add=(par,def)=>{const m=meshFrom(def,T);par.add(m);return m;};
   const M=p.modules,rk=p.rank;
-  const HULL='#b8966a',IRON='#3d3530',PLATE='#c9b48a',RED='#b8332a';
+  const HULL=p.chassis==='scout'?'#8f9a62':p.chassis==='bulwark'?'#8a7a62':'#b8966a',IRON='#3d3530',PLATE='#c9b48a',RED='#b8332a';
+  R3.hullCol=HULL;
   add(root,{g:'box',s:[2.3,.5,.45],p:[0,.25,-.76],c:'#2f2a24'});add(root,{g:'box',s:[2.3,.5,.45],p:[0,.25,.76],c:'#2f2a24'});
   for(const z of [-1,1])for(let i=0;i<4;i++)add(root,{g:'cyl',s:[.34,.08,.34],p:[-.8+i*.53,.25,z*.99],r:[HALF,0,0],c:'#6b5a48'});
   const hull=add(root,{g:'box',s:[1.9,.55,1.25],p:[0,.62,0],c:HULL});
+  if(p.chassis==='bulwark')for(const z of [-1,1]){add(root,{g:'box',s:[1.7,.42,.12],p:[0,.6,z*.86],c:IRON});for(let i=0;i<3;i++)add(root,{g:'box',s:[.12,.12,.06],p:[-.55+i*.55,.72,z*.93],c:'#c9b48a'});}
+  if(p.chassis==='scout')for(const z of [-1,1])add(root,{g:'box',s:[.5,.06,.3],p:[-.85,.95,z*.45],r:[z*.3,0,0],c:IRON});
   add(root,{g:'box',s:[1.94,.08,1.29],p:[0,.6,0],c:IRON});
   let y=.89;
   add(root,{g:'box',s:[1.26,.06,1.0],p:[-.2,y+.03,0],c:IRON});
@@ -2231,7 +2267,7 @@ function render3D(){
   const P=R3.player,ch=p.chomp||0;
   P.root.position.set(p.x,0,p.y);P.root.rotation.y=-p.a;P.root.scale.set(p.r*(1+ch*.1),p.r*(1-ch*.08),p.r*(1+ch*.1));
   P.top.rotation.y=-(p.turA-p.a);const go=p.gunO,rk_=(p.recoil||0)*0.3;P.barrels.rotation.y=-go;P.barrels.position.set(.55-Math.cos(go)*rk_,0,-Math.sin(go)*rk_);
-  P.hull.material.color.set(p.hurt>0?'#fff6e6':'#b8966a');
+  P.hull.material.color.set(p.hurt>0?'#fff6e6':R3.hullCol||'#b8966a');
   P.flame.visible=p.nitro>0;if(p.nitro>0)P.flame.scale.set(.5,.7+Math.random()*.5,.5);
   if(mode==='play'){flattenTrees(p);
     if(G.t-R3.lastSmoke>0.1&&G.parts.length<520){R3.lastSmoke=G.t;P.root.updateMatrixWorld();
@@ -2446,7 +2482,7 @@ function frame(now){
 }
 showTitle();
 requestAnimationFrame(frame);
-if(window.__SJ_TEST)window.__SJ_TEST({get G(){return G;},get mode(){return mode;},update,render,startRun,joy,openLevel,setMode:m=>{mode=m;},pick:i=>{if(onPick)onPick(lastCards[i%lastCards.length]);},get SAVE(){return SAVE;},WORKSHOP,ARTIFACTS,openChest,useAbility,afterPick,MASTERY,addEnt,mkMod,upgradePool,AB,hurt,setSave:o=>{store.set(o);SAVE=loadSave();recoverRun();},setDate:d=>{QDATE=d;},ensureDaily,checkQuests,runStats,snapshotRun,QUESTS:{DAILY,MILESTONES},openGarage,renderGarage,endRun,audioInit,get R3(){return R3;}});
+if(window.__SJ_TEST)window.__SJ_TEST({get G(){return G;},get mode(){return mode;},update,render,startRun,joy,openLevel,setMode:m=>{mode=m;},pick:i=>{if(onPick)onPick(lastCards[i%lastCards.length]);},get SAVE(){return SAVE;},CREW,CHASSIS,WORKSHOP,ARTIFACTS,openChest,useAbility,afterPick,MASTERY,addEnt,mkMod,upgradePool,AB,hurt,setSave:o=>{store.set(o);SAVE=loadSave();recoverRun();},setDate:d=>{QDATE=d;},ensureDaily,checkQuests,runStats,snapshotRun,QUESTS:{DAILY,MILESTONES},openGarage,renderGarage,endRun,audioInit,get R3(){return R3;}});
 })();
 </script>
 </body>
