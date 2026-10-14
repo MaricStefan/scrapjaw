@@ -111,6 +111,30 @@ run('iron','lou',true);run('ash','ida',true);run('ash','sid',false);run('iron','
  assert.ok(rm35.shots>0&&Math.abs(rm35.gun+35)<=3,'and to the other side '+JSON.stringify(rm35));
  assert.ok(r70.shots===0&&Math.abs(r70.gun)<=45,'never past 45° '+JSON.stringify(r70));
  console.log('gun traverse ok:',JSON.stringify({r35,rm35,r70}));api.render();api.endRun('quit');}
+// --- Ironfield: Foundry enemies spawn (with some Greenvale ones) and every boss mechanic works ---
+{api.SAVE.selMap='iron';api.startRun();const G=api.G,P=G.p;const seen={};
+ for(let i=0;i<60*60;i++){if(api.mode==='play'){api.joy.dx=Math.cos(i/90);api.joy.dy=Math.sin(i/70);api.update(1/60);P.hp=P.maxHp;for(const e of G.ents)seen[e.type]=1;if(i%30===0)api.render();}else api.pick(0);}
+ for(const t of ['rivet','spark','crawler','shed','orecart'])assert.ok(seen[t],'Ironfield spawns '+t);
+ assert.ok(seen.grunt||seen.biker||seen.tank,'some Greenvale enemies still mix in');
+ assert.ok(!seen.hut&&!seen.truck,'neutrals are always reskinned');
+ const fight=(stage,secs,fn)=>{api.setMode('play');G.ents=G.ents.filter(e=>e.d.neutral);G.boss=null;G.stage=stage;G.stageT=74.9;G.bossSpawned=false;G.spawnT=G.helperT=1e9;
+   const out={};for(let i=0;i<60*secs;i++){if(api.mode!=='play'){api.pick(0);api.setMode('play');}api.joy.dx=Math.cos(i/50);api.joy.dy=Math.sin(i/40);api.update(1/60);P.hp=P.maxHp;if(i%20===0){api.render();api.R3.on=false;api.render();api.R3.on=true;}if(G.boss)fn(G.boss,out);}
+   return out;};
+ const ox=fight(1,12,(b,o)=>{o.type=b.type;o.fire=o.fire||b.st==='fire';o.pools=Math.max(o.pools||0,G.hazards.length);});
+ assert.ok(ox.type==='ox'&&ox.fire&&ox.pools>3,'Furnace Ox breathes fire and leaves molten pools '+JSON.stringify(ox));
+ const cr=fight(2,16,(b,o)=>{o.type=b.type;o.swing=o.swing||b.st==='swing';o.adds=Math.max(o.adds||0,G.ents.filter(e=>!e.d.neutral&&!e.d.boss).length);});
+ assert.ok(cr.type==='crane'&&cr.swing&&cr.adds>=3,'Crane Queen swings and drops reinforcements '+JSON.stringify(cr));
+ const an=fight(3,8,(b,o)=>{o.type=b.type;o.waves=Math.max(o.waves||0,G.waves.length);});
+ assert.ok(an.type==='anvil'&&an.waves>=1,'The Anvil sends shockwaves '+JSON.stringify(an));
+ {const w={x:P.x+300,y:P.y,r:300-1,spd:0,max:999,gaps:[Math.PI],gw:0.8,dmg:22,hit:false};G.waves=[w];P.iframes=0;api.update(1/60);assert.ok(!w.hit,'standing in a gap is safe');
+  w.gaps=[0];api.update(1/60);assert.ok(w.hit,'outside a gap the ring hits');G.waves=[];}
+ const du=fight(4,3,(b,o)=>{o.type=b.type;o.shielded=b.shielded;o.cars=(b.cars||[]).length;});
+ assert.ok(du.type==='duke'&&du.shielded&&du.cars===4,'Iron Duke starts shielded with 4 cars '+JSON.stringify(du));
+ const B=G.boss;const hp0=B.hp;api.hurt(B,500);assert.strictEqual(B.hp,hp0,'shield blocks damage');
+ api.hurt(B.cars[0],1e9);api.hurt(B.cars[1],1e9);api.update(1/60);assert.strictEqual(B.shield,0.5,'each car takes a quarter off');const h1=B.hp;api.hurt(B,400);assert.ok(Math.abs((h1-B.hp)-200)<1,'half shield halves damage');
+ B.cars.forEach(c=>api.hurt(c,1e9));api.update(1/60);assert.ok(!B.shielded,'shield gone with the cars');const h2=B.hp;api.hurt(B,500);assert.ok(Math.abs((h2-B.hp)-500)<1,'full damage');
+ api.hurt(B,1e9);for(let i=0;i<120&&api.mode==='play';i++)api.update(1/60);assert.ok(G.bossKills>=1);
+ console.log('ironfield ok:',JSON.stringify({ox,cr,an,du}));api.setMode('play');api.endRun('quit');}
 // --- Overtime is optional after the 4th boss, and the clear counts either way ---
 function toChoice(){api.SAVE.selMap='dust';api.startRun();const G=api.G;G.stage=4;G.stageT=74;G.p.rank=3;
   for(let i=0;i<60*30&&(api.mode==='play'||api.mode==='level');i++){if(api.mode==='level'){api.pick(0);continue;}api.update(1/60);G.p.hp=G.p.maxHp;if(G.boss)api.hurt(G.boss,1e9);}
