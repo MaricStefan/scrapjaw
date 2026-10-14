@@ -144,6 +144,16 @@ run('iron','lou',true);run('ash','ida',true);run('ash','sid',false);run('iron','
  for(let i=0;i<60*4;i++){if(api.mode!=='play'){api.pick(0);api.setMode('play');}if(i===10){P.nitroCd=0;api.update(0);}api.update(1/60);P.hp=P.maxHp;if(i%30===0){api.render();api.R3.on=false;api.render();api.R3.on=true;}}
  assert.ok(G.ents.some(e=>e.burnDps>0),'incendiary sets things burning');
  console.log('artifacts ok:',G.arts.length);api.endRun('quit');}
+// --- crew and chassis: perks apply, scout is small and fast, bulwark big and tough, mechanic repairs ---
+{const S=api.SAVE,saved={crew:S.crew.slice(),selCrew:S.selCrew,chassis:S.chassis.slice(),selChassis:S.selChassis,perks:S.perks.slice()};S.perks=[];
+ S.selCap='sarge';S.selMap='dust';S.chassis=['standard','scout','bulwark'];S.crew=['mechanic','loader','spotter','cook','scrounger'];
+ const run=(ch,crew)=>{S.selChassis=ch;S.selCrew=crew;api.startRun();api.update(1/60);return api.G.p;};
+ const std=run('standard','');const r0=std.r,hp0=std.maxHp,cd0=std.modules.front.cd,rg0=std.modules.front.range;api.endRun('quit');
+ const sc=run('scout','loader');assert.ok(sc.r<r0&&sc.maxHp<hp0&&sc.spdMult>1,'scout: smaller, less HP, faster');assert.ok(sc.modules.front.cd<cd0,'loader reloads faster');api.endRun('quit');
+ const bw=run('bulwark','spotter');assert.ok(bw.r>r0&&bw.maxHp>hp0&&bw.spdMult<1,'bulwark: bigger, more HP, slower');assert.ok(bw.modules.front.range>rg0,'spotter adds range');api.render();api.R3.on=false;api.render();api.R3.on=true;api.endRun('quit');
+ const me=run('standard','mechanic');const G=api.G;G.spawnT=G.helperT=1e9;G.ents=G.ents.filter(e=>e.d.neutral);me.hp=20;me.hitT=-10;api.update(1/60);for(let i=0;i<60;i++)api.update(1/60);
+ assert.ok(me.hp>20,'mechanic repairs when not hit');api.endRun('quit');
+ Object.assign(S,saved);console.log('crew + chassis ok');}
 // --- ranged and static enemies can't pile up (per-type caps) ---
 {api.SAVE.selMap='dust';api.startRun();const G=api.G,P=G.p;G.stage=2;let maxT=0,maxW=0;
  for(let i=0;i<60*120;i++){if(api.mode==='play'){api.joy.dx=0;api.joy.dy=0;api.update(1/60);P.hp=P.maxHp;if(G.boss)G.boss=null,G.bossSpawned=true;
