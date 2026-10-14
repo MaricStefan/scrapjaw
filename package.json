@@ -1,0 +1,13 @@
+{
+  "name": "scrapjaw",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Mobile-first 3D tank roguelike. Single-file HTML game.",
+  "scripts": {
+    "test": "node tests/smoke.js",
+    "serve": "npx --yes http-server -p 8080 -c-1 ."
+  },
+  "devDependencies": {
+    "three": "0.128.0"
+  }
+}
