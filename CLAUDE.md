@@ -9,11 +9,12 @@ Mobile-first 3D tank roguelike in ONE file: `index.html` (inline CSS and JS, ins
 - **Progress lives in localStorage** under key `scrapjaw-v1` (`SAVE` object). Never break old saves: add fields with defaults in `loadSave()`.
 
 ## Code map (search for these section comments in index.html)
-- `definitions`: `MODS` (player modules), `EN` (enemies, neutrals, bosses), `WAVES`, `MAPS` (difficulty multipliers and 3D palette `pal`), `CAPS` (captains), `MOD_COST`, `RAR` (card rarities).
+- `definitions`: `MODS` (player modules), `AB` (each module's special ability: name, cooldown, and `v(m,pow)` for its power value), `EN` (enemies, neutrals, bosses), `WAVES`, `MAPS` (difficulty multipliers and 3D palette `pal`), `CAPS` (captains), `MOD_COST`, `RAR` (card rarities).
 - `quests` (right after `definitions`): `DAILY` and `MILESTONES` tables (`m` = metric from `runStats()`, `run:1` = best single run, otherwise runs add up). `ensureDaily()` picks 3 dailies from a hash of the local date. `checkQuests(live)` completes and pays quests, and shows a `#toast` during a run. `foldRun()` adds a finished run into `SAVE.daily`/`SAVE.ms`. `snapshotRun()` (when the app is hidden) and `recoverRun()` (on load) keep progress if the app is killed. Modules in `QUEST_MODS` (Turret Layer) unlock only through a milestone.
 - `state`: `newGame()` builds `G` (the whole run state), and `newPlayer()` builds `G.p`. `G.rs` counts what was eaten and killed per type (`on` only during a real run). `G.qDone` lists the quests finished this run.
 - `audio & haptics`: `sfx(name)`, `SFX` table, procedural music (`playStep`), and `buzz()` for vibration.
-- `combat helpers` / `player modules` / `boss AI`: the gameplay simulation. Everything is 2D (x,y); the renderer maps this to 3D (x, height, y).
+- `combat helpers` / `player modules` / `boss AI`: the gameplay simulation. `useAbility(slot)` fires a module's ability (the player taps its HUD slot, or presses keys 1-4). Each module carries `m.ab = {cd, t, pow}`.
+- Stage flow: a boss spawns `BOSS_AT` seconds into each stage, and boss fights have no timer. When the 4th boss dies, `clearMap()` records the win and unlocks right away, then the player picks Finish run or Overtime. In Overtime (`G.overtime`) the night tint, mortar strikes and dense waves are on, and silver is paid every `OT_PAY` seconds. Dying or quitting there still ends the run as a win. Everything is 2D (x,y); the renderer maps this to 3D (x, height, y).
 - `upgrade cards`: `upgradePool()` returns cards with `s:k=>[[label, old, new]]` stat comparisons. `k` is the rarity multiplier.
 - `garage`: meta-progression UI (maps, captains, workshop).
 - `3D renderer (three.js)`:

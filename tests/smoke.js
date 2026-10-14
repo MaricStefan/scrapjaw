@@ -79,10 +79,38 @@ run('iron','lou',true);run('ash','ida',true);run('ash','sid',false);run('iron','
  api.startRun();api.checkQuests(true);assert.ok(!api.G.qDone.some(q=>q.id==='m_mines'));api.endRun('quit');assert.strictEqual(S.runs,runs+1);}
 // --- the Turret Layer plants sentries that shoot ---
 {api.SAVE.selMap='dust';api.startRun();const G=api.G;const P=G.p;
- P.modules.back={id:'layer',lvl:1,dmg:9,cd:5,range:300,radius:0,shots:1,extra:1,t:0,act:0};
+ P.modules.back={id:'layer',lvl:1,dmg:9,cd:5,range:300,radius:0,shots:1,extra:1,t:0,act:0,ab:{cd:14,t:0,pow:0}};
  let shots=0,maxS=0;for(let i=0;i<60*40;i++){if(api.mode==='play'){api.joy.dx=Math.cos(i/90);api.joy.dy=Math.sin(i/70);const n=G.pb.length;api.update(1/60);maxS=Math.max(maxS,G.sentries.length);if(G.pb.length>n)shots++;P.hp=P.maxHp;if(i%30===0)api.render();}else if(api.mode==='level'||api.mode==='boss')api.pick(0);}
  assert.ok(maxS>=2&&maxS<=P.modules.back.extra+1,'sentry cap '+maxS);assert.ok(shots>0);api.render();
  console.log('turret layer: max sentries',maxS,'fx',api.R3.fx.sentry.count);api.endRun('quit');}
+// --- module abilities: every one fires, goes on cooldown, and its cards apply ---
+{api.SAVE.selMap='dust';api.startRun();const G=api.G,P=G.p;
+ for(let i=0;i<60*25;i++){if(api.mode==='play'){api.joy.dx=1;api.joy.dy=0.3;api.update(1/60);P.hp=P.maxHp;}else api.pick(0);}
+ const slotOf={cannon:'front',plow:'front',broadside:'side',flamer:'side',mines:'back',drone:'back',layer:'back',turret:'top',tesla:'top'};
+ for(const id in api.AB){
+   api.setMode('play');const slot=slotOf[id];P.modules[slot]=api.mkMod(id,P.wdm);
+   const foe=G.ents.find(e=>!e.d.neutral&&!e.d.boss)||null;if(foe){foe.x=P.x+Math.cos(P.a)*90;foe.y=P.y+Math.sin(P.a)*90;}
+   if(id==='drone')for(let i=0;i<10;i++)api.update(1/60);
+   assert.ok(api.useAbility(slot),id+' ability fires');assert.strictEqual(P.modules[slot].ab.t,api.AB[id].cd,id+' on cooldown');
+   assert.ok(!api.useAbility(slot),id+' cannot fire while cooling');
+   for(let i=0;i<120;i++){if(api.mode!=='play')api.pick(0);api.setMode('play');api.update(1/60);P.hp=P.maxHp;}
+   const m=P.modules[slot],pool=api.upgradePool().filter(c=>c.t===api.AB[id].name);assert.strictEqual(pool.length,2,id+' has cooldown + power cards');
+   const cd0=m.ab.cd;pool[0].ap(1);pool[1].ap(1);assert.ok(m.ab.cd<cd0&&m.ab.pow===1,id+' cards apply');
+   api.render();
+ }
+ console.log('abilities ok:',Object.keys(api.AB).join(' '));api.endRun('quit');}
+// --- Overtime is optional after the 4th boss, and the clear counts either way ---
+function toChoice(){api.SAVE.selMap='dust';api.startRun();const G=api.G;G.stage=4;G.stageT=74;G.p.rank=3;
+  for(let i=0;i<60*30&&(api.mode==='play'||api.mode==='level');i++){if(api.mode==='level'){api.pick(0);continue;}api.update(1/60);G.p.hp=G.p.maxHp;if(G.boss)api.hurt(G.boss,1e9);}
+  assert.strictEqual(api.mode,'boss','choice after the last boss');assert.ok(G.cleared&&api.SAVE.cleared.dust);return G;}
+{const wins=api.SAVE.wins,runs=api.SAVE.runs;const G=toChoice();assert.strictEqual(api.SAVE.wins,wins+1,'clear counted before choosing');
+ api.pick(0);assert.strictEqual(api.mode,'over');assert.ok(!G.overtime);assert.strictEqual(api.SAVE.runs,runs+1);}
+{const wins=api.SAVE.wins,silver0=api.SAVE.silver;const G=toChoice();api.pick(1);
+ assert.strictEqual(api.mode,'play');assert.ok(G.overtime&&!G.boss);
+ for(let i=0;i<60*65;i++){api.joy.dx=Math.cos(i/80);api.joy.dy=Math.sin(i/60);api.update(1/60);G.p.hp=G.p.maxHp;if(api.mode==='level')api.pick(0);}
+ assert.ok(G.otSilver>0&&G.otT>=60,'overtime pays silver');assert.ok(!G.bossSpawned||!G.boss,'no boss in overtime');
+ G.p.hp=1;G.p.iframes=0;api.endRun(false);assert.strictEqual(api.SAVE.wins,wins+1,'dying in overtime is still one win');assert.ok(api.SAVE.silver>=silver0+G.otSilver);
+ console.log('overtime ok: lasted',Math.round(G.otT),'s, bonus',G.otSilver);}
 // inspect 3D state after a fresh run
 api.SAVE.selMap='dust';api.startRun();for(let i=0;i<60*20;i++){if(api.mode==='play'){api.joy.dx=1;api.joy.dy=0;api.update(1/60);}else if(api.mode==='level')api.pick(0);}
 api.render();
