@@ -203,6 +203,9 @@ function toChoice(){api.SAVE.selMap='dust';api.startRun();const G=api.G;G.stage=
  assert.ok(G.otSilver>0&&G.otT>=60,'overtime pays silver');assert.ok(!G.bossSpawned||!G.boss,'no boss in overtime');
  G.p.hp=1;G.p.iframes=0;api.endRun(false);assert.strictEqual(api.SAVE.wins,wins+1,'dying in overtime is still one win');assert.ok(api.SAVE.silver>=silver0+G.otSilver);
  console.log('overtime ok: lasted',Math.round(G.otT),'s, bonus',G.otSilver);}
+// --- no screen shake: the camera stays put even after big explosions ---
+{api.SAVE.selMap='dust';api.startRun();const G=api.G;G.shake=18;api.render();const c1=api.R3.cam.position.clone();G.shake=18;api.render();const c2=api.R3.cam.position;
+ assert.ok(c1.distanceTo(c2)<1e-6,'camera does not shake');console.log('no shake ok');api.endRun('quit');}
 // inspect 3D state after a fresh run
 api.SAVE.selMap='dust';api.startRun();for(let i=0;i<60*20;i++){if(api.mode==='play'){api.joy.dx=1;api.joy.dy=0;api.update(1/60);}else if(api.mode==='level')api.pick(0);}
 api.render();
