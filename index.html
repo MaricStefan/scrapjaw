@@ -314,7 +314,7 @@ const store={
 
 /* ---------- definitions ---------- */
 const MODS={
-  cannon:   {slot:'front',name:'Main Gun',     desc:'Heavy shells straight ahead.', dmg:24,cd:0.85,range:430},
+  cannon:   {slot:'front',name:'Main Gun',     desc:'Heavy shells ahead. The gun swings up to 45° left or right to aim.', dmg:24,cd:0.85,range:430},
   plow:     {slot:'front',name:'Ram Plow',     desc:'Shreds whatever is in front and halves ramming damage you take.', dmg:34,cd:0.3,range:0},
   broadside:{slot:'side', name:'Broadside',    desc:'Guns on both flanks fire left and right.', dmg:15,cd:1.0,range:360},
   flamer:   {slot:'side', name:'Side Flamers', desc:'Short burning cones on both flanks.', dmg:6,cd:0.14,range:125},
@@ -339,6 +339,7 @@ const AB={
 const SLOT_NAME={front:'Front',side:'Sides',back:'Rear',top:'Top'};
 const SLOT_KEYS=['front','side','back','top'];
 const MOD_LEVELS=[3,6,10,15];
+const GUN_ARC=Math.PI/4, GUN_TURN=4; // Main Gun traverse: ±45° from the hull's heading, rad/s
 
 const EN={
   scrap: {hp:1,  r:9, spd:0,  xp:1, edible:0, neutral:1, stat:1},
@@ -482,7 +483,7 @@ recoverRun();
 let G=null, mode='title';
 function newPlayer(){
   return {x:WORLD/2,y:WORLD/2,a:-Math.PI/2,v:0,hp:120,maxHp:120,rank:0,r:20,baseSpeed:175,spdMult:1,turn:3.1,turnMult:1,
-    ramDmg:28,magnet:95,armor:0,level:1,xp:0,xpNext:6,nitro:0,nitroCd:0,nitroMax:7,hurt:0,odo:0,turA:0,
+    ramDmg:28,magnet:95,gunO:0,armor:0,level:1,xp:0,xpNext:6,nitro:0,nitroCd:0,nitroMax:7,hurt:0,odo:0,turA:0,
     modules:{front:mkMod('cannon'),side:null,back:null,top:null},kills:0,eaten:0,iframes:0,rerolls:2,wdm:1,taken:1,luck:0,silverMult:1,totalXp:0};
 }
 function mkMod(id,wdm){const d=MODS[id];return {id,lvl:1,dmg:d.dmg*(wdm||1),cd:d.cd,range:d.range||0,radius:d.radius||0,shots:1,extra:1,t:0,act:0,ab:{cd:AB[id].cd,t:0,pow:0}};}
@@ -717,12 +718,14 @@ function updateModules(dt){
   // front
   const f=M.front;
   if(f){f.t-=dt;
-    if(f.id==='cannon'&&f.t<=0){
-      const tg=nearest(p.x,p.y,f.range,cone(p.a,0.42));
-      if(tg){f.t=f.cd;const n=f.shots;
-        for(let i=0;i<n;i++){const off=(i-(n-1)/2);const ox=p.x+Math.cos(p.a)*p.r*1.5-Math.sin(p.a)*off*p.r*0.22,oy=p.y+Math.sin(p.a)*p.r*1.5+Math.cos(p.a)*off*p.r*0.22;
-          shoot(ox,oy,p.a+off*0.06,640,f.dmg,f.range,{r:6,pierce:f.extra-1});}
-        parts(p.x+Math.cos(p.a)*p.r*1.7,p.y+Math.sin(p.a)*p.r*1.7,7,'#ffcf6a',200,6,0.18);p.recoil=1;sfx('cannon');G.shake=Math.min(14,G.shake+0.7);}
+    if(f.id==='cannon'){ // the gun swings within ±GUN_ARC of the hull and fires once it's on target
+      const tg=nearest(p.x,p.y,f.range,cone(p.a,GUN_ARC+0.12));
+      const want=tg?clamp(angDiff(p.a,Math.atan2(tg.y-p.y,tg.x-p.x)),-GUN_ARC,GUN_ARC):0;
+      p.gunO+=clamp(want-p.gunO,-GUN_TURN*dt,GUN_TURN*dt);
+      if(f.t<=0&&tg&&Math.abs(want-p.gunO)<0.1){f.t=f.cd;const n=f.shots,ga=p.a+p.gunO,cg=Math.cos(ga),sg=Math.sin(ga);
+        const px=p.x+Math.cos(p.a)*p.r*0.55,py=p.y+Math.sin(p.a)*p.r*0.55;
+        for(let i=0;i<n;i++){const off=(i-(n-1)/2);shoot(px+cg*p.r*0.95-sg*off*p.r*0.22,py+sg*p.r*0.95+cg*off*p.r*0.22,ga+off*0.06,640,f.dmg,f.range,{r:6,pierce:f.extra-1});}
+        parts(px+cg*p.r*1.15,py+sg*p.r*1.15,7,'#ffcf6a',200,6,0.18);p.recoil=1;sfx('cannon');G.shake=Math.min(14,G.shake+0.7);}
     }
     if(f.id==='plow'&&f.t<=0){f.t=f.cd;
       for(const e of G.ents){if(e.dead||e.d.neutral)continue;const dx=e.x-p.x,dy=e.y-p.y,dd=Math.hypot(dx,dy);
@@ -809,8 +812,9 @@ function useAbility(slot){
   const v=AB[m.id].v(m,A.pow),ca=Math.cos(p.a),sa=Math.sin(p.a);let ok=true;
   const foes=()=>G.ents.filter(e=>!e.dead&&!e.d.neutral);
   if(m.id==='cannon'){
-    shoot(p.x+ca*p.r*1.6,p.y+sa*p.r*1.6,p.a,760,v,m.range*1.5,{r:13,pierce:99,col:'#ff8a2a'});
-    parts(p.x+ca*p.r*1.8,p.y+sa*p.r*1.8,16,'#ffcf6a',300,8,0.3);p.recoil=1;sfx('boom',0.8);
+    const ga=p.a+p.gunO,cg=Math.cos(ga),sg=Math.sin(ga),px=p.x+ca*p.r*0.55,py=p.y+sa*p.r*0.55;
+    shoot(px+cg*p.r*1.05,py+sg*p.r*1.05,ga,760,v,m.range*1.5,{r:13,pierce:99,col:'#ff8a2a'});
+    parts(px+cg*p.r*1.25,py+sg*p.r*1.25,16,'#ffcf6a',300,8,0.3);p.recoil=1;sfx('boom',0.8);
   }else if(m.id==='plow'){
     for(const e of foes()){const dx=e.x-p.x,dy=e.y-p.y,d=Math.hypot(dx,dy)||1;
       if(d<v+e.r&&Math.abs(angDiff(p.a,Math.atan2(dy,dx)))<1.1){hurt(e,m.dmg*3);if(!e.d.stat&&!e.d.boss){e.x+=dx/d*120;e.y+=dy/d*120;e.stun=1.5;}}}
@@ -1381,7 +1385,7 @@ function drawTank(p){
   }}
   // front module
   const f=M.front;
-  if(f&&f.id==='cannon'){ctx.fillStyle='#3d4552';for(let i=0;i<f.shots;i++){const y=(i-(f.shots-1)/2)*s*0.24;rr(s*0.5-(p.recoil||0)*s*0.3,y-s*0.08,s*1.15,s*0.16,s*0.04);ctx.fill();}}
+  if(f&&f.id==='cannon'){ctx.save();ctx.translate(s*0.45,0);ctx.rotate(p.gunO);ctx.fillStyle='#3d4552';for(let i=0;i<f.shots;i++){const y=(i-(f.shots-1)/2)*s*0.24;rr(s*0.05-(p.recoil||0)*s*0.3,y-s*0.08,s*1.15,s*0.16,s*0.04);ctx.fill();}ctx.restore();}
   if(f&&f.id==='plow'){ctx.fillStyle='#7a8290';ctx.strokeStyle=COL.ink;ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(s*0.85,-s*1.05);ctx.lineTo(s*1.4,-s*0.2);ctx.lineTo(s*1.4,s*0.2);ctx.lineTo(s*0.85,s*1.05);ctx.closePath();ctx.fill();ctx.stroke();
     ctx.fillStyle='#d9d2c0';for(let i=-2;i<=2;i++){ctx.beginPath();ctx.moveTo(s*1.4,i*s*0.3-s*0.08);ctx.lineTo(s*1.62,i*s*0.3);ctx.lineTo(s*1.4,i*s*0.3+s*0.08);ctx.fill();}}
   // body
@@ -1750,7 +1754,8 @@ function buildPlayer3D(p){
   for(let i=0;i<nC;i++){const side=i%2?1:-1,x=.35-Math.floor(i/2)*.32;
     add(root,{g:'cyl',s:[.13,.2,.13],p:[x,stackBase+.1,side*.38],c:'#5a6b8a'});add(root,{g:'sph',s:[.12,.12,.12],p:[x,stackBase+.26,side*.38],c:'#e8c9a0'});}
   const f=M.front;
-  if(f&&f.id==='cannon'){root.add(barrels);for(let i=0;i<f.shots;i++)add(barrels,{g:'cyl',s:[.17,1.15,.17],p:[1.05,.78,(i-(f.shots-1)/2)*.26],r:[0,0,HALF],c:'#3d4552'});}
+  if(f&&f.id==='cannon'){root.add(barrels);barrels.position.x=.55;add(barrels,{g:'box',s:[.34,.24,.3+.26*(f.shots-1)],p:[0,.78,0],c:IRON});
+    for(let i=0;i<f.shots;i++)add(barrels,{g:'cyl',s:[.17,1.15,.17],p:[.5,.78,(i-(f.shots-1)/2)*.26],r:[0,0,HALF],c:'#3d4552'});}
   if(f&&f.id==='plow'){add(root,{g:'box',s:[.2,.6,2.1],p:[1.05,.45,0],c:'#7a8290'});for(let i=-2;i<=2;i++)add(root,{g:'cone',s:[.16,.38,.16],p:[1.3,.45,i*.38],r:[0,0,-HALF],c:'#d9d2c0'});}
   const sd=M.side;
   if(sd)for(const sz of [-1,1]){
@@ -1805,7 +1810,7 @@ function render3D(){
   if(key!==R3.key){R3.key=key;buildPlayer3D(p);}
   const P=R3.player,ch=p.chomp||0;
   P.root.position.set(p.x,0,p.y);P.root.rotation.y=-p.a;P.root.scale.set(p.r*(1+ch*.1),p.r*(1-ch*.08),p.r*(1+ch*.1));
-  P.top.rotation.y=-(p.turA-p.a);P.barrels.position.x=-(p.recoil||0)*0.3;
+  P.top.rotation.y=-(p.turA-p.a);const go=p.gunO,rk_=(p.recoil||0)*0.3;P.barrels.rotation.y=-go;P.barrels.position.set(.55-Math.cos(go)*rk_,0,-Math.sin(go)*rk_);
   P.hull.material.color.set(p.hurt>0?'#fff6e6':'#b8966a');
   P.flame.visible=p.nitro>0;if(p.nitro>0)P.flame.scale.set(.5,.7+Math.random()*.5,.5);
   if(mode==='play'){flattenTrees(p);
