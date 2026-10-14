@@ -25,7 +25,7 @@ npm run serve   # then open http://<your-computer-ip>:8080 on the phone
 ```bash
 npm install
 npm test                      # headless smoke test: plays full runs and checks the 3D scene logic
-python3 tests/screenshots.py  # optional: real screenshots in headless Chromium (needs Playwright)
+python3 tests/screenshots.py  # optional: real screenshots in headless Chromium (needs Playwright; on Windows use py -3)
 ```
 
 ## Publish for testers (GitHub Pages)
