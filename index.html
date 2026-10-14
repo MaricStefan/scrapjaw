@@ -1683,7 +1683,7 @@ function render2D(){
   const z=zoom();
   ctx.setTransform(DPR,0,0,DPR,0,0);
   const mc=G.mapDef.colors[COL.dark?'dark':'light'];ctx.fillStyle=mc[0];ctx.fillRect(0,0,W,H);
-  const sx=G.shake>0.3?rnd(-G.shake,G.shake):0,sy=G.shake>0.3?rnd(-G.shake,G.shake):0;
+  const sx=0,sy=0; // no screen shake: with many explosions it was hard on the eyes
   ctx.save();ctx.translate(W/2+sx,H/2+sy);ctx.scale(z,z);ctx.translate(-G.cam.x,-G.cam.y);
   drawGround(z);
   const vx0=G.cam.x-W/2/z-80,vx1=G.cam.x+W/2/z+80,vy0=G.cam.y-H/2/z-80,vy1=G.cam.y+H/2/z+80;
@@ -2035,7 +2035,7 @@ function render3D(){
   // camera
   const want=camDist();R3.d+=(want-R3.d)*0.06;if(!isFinite(R3.d))R3.d=want;
   const d=R3.d,tx=G.cam.x,tz=G.cam.y,vs=viewSize();
-  const sk=G.shake>0.3?G.shake*d/700:0;
+  const sk=0; // no screen shake: with many explosions it was hard on the eyes
   const cam=R3.cam;cam.left=-vs.w/2;cam.right=vs.w/2;cam.top=vs.h/2;cam.bottom=-vs.h/2;cam.updateProjectionMatrix();
   const ox=tx+rnd(-sk,sk),oz=tz+rnd(-sk,sk);
   cam.position.set(ox,Math.sin(PITCH)*2400,oz+Math.cos(PITCH)*2400);cam.lookAt(ox,0,oz);
