@@ -159,7 +159,39 @@ button:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
 .toggles{display:flex;gap:8px;margin-top:12px}
 .tog{flex:1;border:3px solid var(--line);border-radius:8px;background:#3a3142;padding:8px 4px;font-size:17px;font-weight:700}
 .tog[aria-pressed="false"]{opacity:.5;text-decoration:line-through}
-@media (prefers-reduced-motion: reduce){#banner.go{animation-duration:2.4s;animation-name:banr}@keyframes banr{0%,85%{opacity:1}100%{opacity:0}}}
+
+/* quests */
+.quest .qbar{display:block;height:8px;margin:5px 0 3px;border-radius:4px;background:#17121b;border:2px solid var(--line);overflow:hidden}
+.quest .qbar i{display:block;height:100%;width:0;background:linear-gradient(#ffd257,#d99a1e)}
+.quest.done .qbar i{background:linear-gradient(#a9d47a,#5f8f35)}
+.quest.done{border-color:#4f6b36}
+.quest.done .txt{opacity:.75}
+.rew{flex:none;font-weight:700;font-size:17px;color:#d9e1ea;white-space:nowrap}
+.rew.mod{color:var(--teal)}
+.rew:not(.mod)::before{content:"";display:inline-block;width:8px;height:8px;background:#c9d2dc;border:2px solid #6b7480;transform:rotate(45deg);margin-right:7px;vertical-align:1px}
+.quest.done .tag{color:#a9d47a}
+#toast{position:absolute;left:50%;top:158px;width:min(calc(100% - 120px),340px);transform:translateX(-50%);box-sizing:border-box;padding:7px 12px 8px;text-align:center;pointer-events:none;opacity:0;
+  background:linear-gradient(#2c2433,#211b27);border:3px solid var(--gold);border-radius:10px;box-shadow:inset 0 0 0 2px #17121b,0 4px 0 rgba(0,0,0,.5)}
+#toast span{display:block;font-family:'Black Ops One',Impact,sans-serif;font-size:14px;color:var(--gold);letter-spacing:.5px}
+#toast b{display:block;font-size:19px;line-height:1.15;color:#fff}
+#toast small{display:block;font-size:16px;font-weight:700;color:#d9e1ea}
+#toast.go{animation:toast 2.8s ease-out}
+@keyframes toast{0%{opacity:0;transform:translate(-50%,-14px)}8%{opacity:1;transform:translate(-50%,0)}82%{opacity:1}100%{opacity:0}}
+.recs{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:12px 0 4px}
+.rec{position:relative;background:#17121b;border:2px solid #3d3446;border-radius:8px;padding:6px 4px 5px;text-align:center}
+.rec span{display:block;font-size:15px;color:var(--muted);line-height:1.1}
+.rec b{display:block;font-family:'Black Ops One',Impact,sans-serif;font-weight:400;font-size:24px;line-height:1.15;color:#fff}
+.rec small{display:block;font-size:14px;font-weight:700;color:var(--muted)}
+.rec.new{border-color:var(--gold)}
+.rec.new small{color:var(--gold)}
+.qdone{margin-top:12px}
+.qdone h4{margin:0 0 4px;font-family:'Black Ops One',Impact,sans-serif;font-weight:400;font-size:18px;color:var(--gold)}
+.qdone p{margin:0;font-size:16px;color:var(--muted)}
+.qdone div{display:flex;justify-content:space-between;gap:8px;font-size:17px;line-height:1.3}
+.qdone div b{flex:none;color:#d9e1ea}
+.qdone div b.mod{color:var(--teal)}
+@media (prefers-reduced-motion: reduce){#banner.go{animation-duration:2.4s;animation-name:banr}@keyframes banr{0%,85%{opacity:1}100%{opacity:0}}
+  #toast.go{animation-name:toastr}@keyframes toastr{0%,85%{opacity:1}100%{opacity:0}}}
 </style>
 </head>
 <body>
@@ -182,6 +214,7 @@ button:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
     <button id="nitro" aria-label="Boost"><div class="cool"></div><span>Boost</span></button>
     <div id="hint">Touch and drag anywhere to drive</div>
     <div id="banner"><b></b><small></small></div>
+    <div id="toast" role="status" aria-live="polite"><span>Quest complete</span><b></b><small></small></div>
   </div>
 
   <div class="overlay show" id="title">
@@ -204,9 +237,11 @@ button:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
     <div class="gwrap">
       <div class="ghead"><button class="back" id="gBack" aria-label="Back to title">&lsaquo;</button><h2>Garage</h2><span class="silver" id="silverTxt">0</span></div>
       <div class="gbody">
+        <h3>Daily quests</h3><p class="note" id="dailyNote"></p><div id="dailyList"></div>
         <h3>Battlefield</h3><p class="note">Clear all four bosses in one run to unlock the next one.</p><div id="mapList"></div>
         <h3>Captain</h3><p class="note">Each captain has a perk and a drawback.</p><div id="capList"></div>
         <h3>Workshop</h3><p class="note">You always have Main Gun, Broadside, Mine Dropper and Auto Turret. Unlocked modules join your level-up offers.</p><div id="modList"></div>
+        <h3>Milestones</h3><p class="note">Permanent goals. Some unlock new gear.</p><div id="msList"></div>
       </div>
       <div class="gfoot"><button class="big" id="rollBtn">Roll out</button></div>
     </div>
@@ -233,7 +268,9 @@ button:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
     <div class="panel">
       <h2 id="overTitle"></h2>
       <p class="sub" id="overSub"></p>
+      <div class="recs" id="overRecs"></div>
       <div class="stats" id="overStats"></div>
+      <div class="qdone" id="overQuests"></div>
       <div class="btnrow"><button class="btn" id="menuBtn">Garage</button><button class="btn primary" id="againBtn">Roll again</button></div>
     </div>
   </div>
@@ -277,6 +314,7 @@ const MODS={
   flamer:   {slot:'side', name:'Side Flamers', desc:'Short burning cones on both flanks.', dmg:6,cd:0.14,range:125},
   mines:    {slot:'back', name:'Mine Dropper', desc:'Leaves mines in your tracks while you drive.', dmg:50,cd:1.1,radius:72},
   drone:    {slot:'back', name:'Drone Bay',    desc:'A combat drone circles you and shoots.', dmg:10,cd:0.65,range:320},
+  layer:    {slot:'back', name:'Turret Layer', desc:'Plants sentry guns in your tracks. Each one fires at nearby enemies for a while.', dmg:9,cd:5,range:300},
   turret:   {slot:'top',  name:'Auto Turret',  desc:'Spins 360° and fires at the nearest enemy.', dmg:12,cd:0.55,range:390},
   tesla:    {slot:'top',  name:'Tesla Coil',   desc:'Lightning chains between enemies and slows them.', dmg:17,cd:1.25,range:300},
 };
@@ -333,11 +371,92 @@ const CAPS=[
 ];
 const START_MODS=['cannon','broadside','mines','turret'];
 const MOD_COST={plow:250,flamer:300,drone:400,tesla:600};
+const QUEST_MODS={layer:'m_mines'}; // modules that only a milestone unlocks
+// quests: m = run metric (see runStats), run:1 = best single run counts, otherwise runs add up
+const DAILY=[
+  {id:'d_soldiers',m:'soldiers',n:100,run:1,t:'Eat 100 soldiers in one run',silver:100},
+  {id:'d_bosses',  m:'bosses',  n:2,         t:'Destroy 2 bosses',silver:120},
+  {id:'d_gold',    m:'gold',    n:500,run:1, t:'Collect 500 gold in one run',silver:80},
+  {id:'d_kills',   m:'kills',   n:300,       t:'Destroy 300 enemies',silver:80},
+  {id:'d_huts',    m:'huts',    n:8,run:1,   t:'Eat 8 huts in one run',silver:100},
+  {id:'d_tanks',   m:'tanks',   n:25,        t:'Take out 25 enemy tanks',silver:90},
+  {id:'d_time',    m:'time',    n:300,run:1, t:'Survive 5 minutes in one run',silver:120},
+  {id:'d_scrap',   m:'scrap',   n:100,       t:'Eat 100 scrap',silver:60},
+  {id:'d_level',   m:'level',   n:14,run:1,  t:'Reach level 14 in one run',silver:100},
+  {id:'d_trucks',  m:'trucks',  n:8,         t:'Eat 8 trucks',silver:80},
+  {id:'d_carts',   m:'carts',   n:3,         t:'Destroy 3 helper carts',silver:70},
+];
+const MILESTONES=[
+  {id:'m_mines',   m:'mines',     n:10,run:1, t:'Get Mine Dropper to level 10 in one run',mod:'layer'},
+  {id:'m_scrap',   m:'scrap',     n:300,      t:'Eat 300 scrap',silver:200},
+  {id:'m_dust',    m:'clear:dust',n:1,run:1,  t:'Clear Greenvale',silver:300},
+  {id:'m_soldiers',m:'soldiers',  n:1000,     t:'Eat 1,000 soldiers',silver:250},
+  {id:'m_bosses',  m:'bosses',    n:10,       t:'Destroy 10 bosses',silver:300},
+  {id:'m_iron',    m:'clear:iron',n:1,run:1,  t:'Clear Ironfield',silver:400},
+  {id:'m_level',   m:'level',     n:20,run:1, t:'Reach level 20 in one run',silver:250},
+  {id:'m_kills',   m:'kills',     n:2500,     t:'Destroy 2,500 enemies',silver:300},
+  {id:'m_ash',     m:'clear:ash', n:1,run:1,  t:'Clear Ashlands',silver:500},
+];
+DAILY.forEach(q=>q.daily=1);
 function loadSave(){const s=store.get();s.silver=s.silver||0;s.mods=s.mods||[];s.caps=s.caps||['sarge'];s.maps=s.maps||['dust'];
-  s.cleared=s.cleared||{};s.settings=Object.assign({sound:true,music:true,haptic:true},s.settings||{});s.selMap=s.maps.includes(s.selMap)?s.selMap:'dust';s.selCap=s.caps.includes(s.selCap)?s.selCap:'sarge';return s;}
+  s.cleared=s.cleared||{};s.settings=Object.assign({sound:true,music:true,haptic:true},s.settings||{});s.selMap=s.maps.includes(s.selMap)?s.selMap:'dust';s.selCap=s.caps.includes(s.selCap)?s.selCap:'sarge';
+  s.runs=s.runs||0;s.stage=s.stage||0;s.level=s.level||0;s.wins=s.wins||0;
+  s.best=Object.assign({time:0,gold:0,bosses:0},s.best||{});
+  const d=s.daily||{};s.daily={date:typeof d.date==='string'?d.date:'',ids:Array.isArray(d.ids)?d.ids:[],prog:d.prog||{},done:d.done||{}};
+  const ms=s.ms||{};s.ms={prog:ms.prog||{},done:ms.done||{}};
+  return s;}
 let SAVE=loadSave();
 function persist(){store.set(SAVE);}
 const modUnlocked=id=>START_MODS.includes(id)||SAVE.mods.includes(id);
+
+/* ---------- quests ---------- */
+let QDATE=null; // test override for "today"
+const ZR={soldiers:0,scrap:0,huts:0,trucks:0,kills:0,tanks:0,carts:0,bosses:0,gold:0,time:0,level:0,mines:0};
+function dayKey(){const d=QDATE?new Date(QDATE):new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+function ensureDaily(){
+  const k=dayKey(),D=SAVE.daily;
+  if(D.date===k&&D.ids.length===3&&D.ids.every(id=>DAILY.some(q=>q.id===id)))return false;
+  let seed=7;for(const ch of k)seed=(seed*31+ch.charCodeAt(0))|0;const r=mulberry(seed);
+  const pool=DAILY.map(q=>q.id),ids=[];while(ids.length<3)ids.push(pool.splice(Math.floor(r()*pool.length),1)[0]);
+  SAVE.daily={date:k,ids,prog:{},done:{}};return true;
+}
+const activeDaily=()=>SAVE.daily.ids.map(id=>DAILY.find(q=>q.id===id)).filter(Boolean);
+const activeQuests=()=>activeDaily().concat(MILESTONES);
+const qStore=q=>q.daily?SAVE.daily:SAVE.ms;
+function runStats(){ // this run's numbers, zeros outside a run
+  if(!G||!G.rs||!G.rs.on)return ZR;
+  const e=G.rs.eat,k=G.rs.kill,p=G.p,b=p.modules.back,c=(o,...ts)=>ts.reduce((s,t)=>s+(o[t]||0),0);
+  return {soldiers:c(e,'grunt','biker'),scrap:c(e,'scrap'),huts:c(e,'hut'),trucks:c(e,'truck'),kills:p.kills,tanks:c(k,'tank','heavy')+c(e,'tank'),
+    carts:c(k,'magnetcart','repaircart'),bosses:G.bossKills,gold:Math.floor(p.totalXp),time:Math.floor(G.t),level:p.level,mines:b&&b.id==='mines'?b.lvl:0};
+}
+function qRunVal(q,R){return q.m.startsWith('clear:')?(SAVE.cleared[q.m.slice(6)]?1:0):(R[q.m]||0);}
+function qVal(q,R){const st=qStore(q).prog[q.id]||0,v=qRunVal(q,R||runStats());return q.run?Math.max(st,v):st+v;}
+function foldRun(R,date){ // add a finished run into stored progress
+  const f=q=>{const S=qStore(q),v=qRunVal(q,R);S.prog[q.id]=q.run?Math.max(S.prog[q.id]||0,v):(S.prog[q.id]||0)+v;};
+  MILESTONES.forEach(f);if(SAVE.daily.date===date)activeDaily().forEach(f);
+}
+function grant(q){if(q.silver)SAVE.silver+=q.silver;if(q.mod&&!SAVE.mods.includes(q.mod))SAVE.mods.push(q.mod);}
+function checkQuests(live){
+  const R=runStats(),got=[];
+  for(const q of activeQuests()){const S=qStore(q);if(S.done[q.id])continue;
+    if(qVal(q,R)>=q.n){S.done[q.id]=true;grant(q);got.push(q);}}
+  if(got.length){persist();if(G&&G.rs&&G.rs.on)G.qDone.push(...got);if(live)got.forEach(q=>{toastQ.push(q);if(toastQ.length===1)showToast();});}
+  return got;
+}
+const qReward=q=>q.mod?'Unlocks '+MODS[q.mod].name:'+'+q.silver+' silver';
+const qFmt=(q,v)=>q.m==='time'?mmss(v):String(Math.floor(v));
+const toastQ=[];
+function showToast(){
+  const q=toastQ[0];if(!q)return;const t=$('#toast');
+  t.querySelector('b').textContent=q.t;t.querySelector('small').textContent=qReward(q);
+  t.classList.remove('go');void t.offsetWidth;t.classList.add('go');sfx('quest');buzz([20,40,20]);
+  setTimeout(()=>{toastQ.shift();showToast();},2800);
+}
+function snapshotRun(){ // keeps quest progress if the app is killed mid-run
+  if(!G||!G.rs||!G.rs.on)return;SAVE.pendingRun={date:SAVE.daily.date,R:Object.assign({},runStats())};persist();
+}
+function recoverRun(){if(!SAVE.pendingRun)return;const pr=SAVE.pendingRun;delete SAVE.pendingRun;if(pr&&pr.R)foldRun(Object.assign({},ZR,pr.R),pr.date);persist();}
+recoverRun();
 
 /* ---------- state ---------- */
 let G=null, mode='title';
@@ -352,7 +471,8 @@ function newGame(mapId,capId){
   const P=newPlayer();cap.ap(P);P.modules.front=mkMod('cannon',P.wdm);
   G={t:0,stage:1,stageT:0,boss:null,bossSpawned:false,bossT:0,overtime:false,spawnT:1.5,crateT:22,mortarT:2,neutT:0,
     ents:[],pb:[],eb:[],mines:[],pick:[],parts:[],texts:[],strikes:[],bolts:[],drones:[],crates:[],tracks:[],drops:[],fires:[],helperT:38,helperN:0,rings:[],decals:[],flash:0,redflash:0,hitstop:0,combo:0,comboT:0,
-    p:P,mapDef,cap,bossKills:0,lvQ:[],shake:0,cam:{x:WORLD/2,y:WORLD/2}};
+    p:P,mapDef,cap,bossKills:0,lvQ:[],shake:0,cam:{x:WORLD/2,y:WORLD/2},
+    sentries:[],rs:{on:false,eat:{},kill:{}},qDone:[],qT:0.5};
   for(let i=0;i<75;i++)spawnNeutral(true);
   if(R3.on)setupWorld(G.mapDef);
 }
@@ -462,6 +582,7 @@ const SFX={
   over:t=>[392,330,262,196].forEach((f,i)=>tone(t+i*.17,'triangle',f,0,.34,.18)),
   win:t=>[523,659,784,1047,1319].forEach((f,i)=>tone(t+i*.11,'triangle',f,0,.4,.18)),
   click:t=>tone(t,'square',1300,0,.03,.045),
+  quest:t=>{[659,880,1175].forEach((f,i)=>tone(t+i*.08,'square',f,0,.14,.07));tone(t+.24,'triangle',1319,0,.4,.17);},
 };
 const GAP={pew:.045,cannon:.06,flame:.12,eat:.035,pick:.028,boom:.05,hurt:.12,zap:.06,mine:.1,pop:.04,click:.05};
 const lastS={};
@@ -520,7 +641,7 @@ function hurt(e,dmg){
   if(e.hp<=0)kill(e);
 }
 function kill(e){
-  e.dead=true;const p=G.p;
+  e.dead=true;const p=G.p;G.rs.kill[e.type]=(G.rs.kill[e.type]||0)+1;
   parts(e.x,e.y,e.d.boss?60:10,e.d.neutral?'#9a8a6a':'#e2722c',e.d.boss?380:180,e.d.boss?9:5,e.d.boss?1.1:0.5);
   if(e.d.boss){bossDown(e);return;}
   if(!e.d.neutral){p.kills++;if(e.r>=14){G.rings.push({x:e.x,y:e.y,r:e.r*0.5,max:e.r*2.6,life:0.3,ml:0.3});smoke(e.x,e.y,3,e.r*1.5);debris(e.x,e.y,4,200);sfx('boom',0.45);}else sfx('pop');}else sfx('pop');
@@ -625,6 +746,17 @@ function updateModules(dt){
       G.drones.forEach((d,i)=>{d.a+=2.0*dt;const R=p.r+48;d.x=p.x+Math.cos(d.a)*R;d.y=p.y+Math.sin(d.a)*R;d.t-=dt;
         if(d.t<=0){const tg=nearest(d.x,d.y,b.range);if(tg){d.t=b.cd;shoot(d.x,d.y,Math.atan2(tg.y-d.y,tg.x-d.x),600,b.dmg,b.range,{r:4,col:'#9fe0ff'});sfx('pew');}}});
     }
+    if(b.id==='layer'){
+      if(b.t<=0){b.t=b.cd;
+        G.sentries.push({x:p.x-Math.cos(p.a)*p.r*1.6,y:p.y-Math.sin(p.a)*p.r*1.6,a:p.a+Math.PI,t:0.5,life:16,max:16});
+        while(G.sentries.length>b.extra+1)G.sentries.shift();sfx('mine');}
+      for(const s_ of G.sentries){s_.life-=dt;s_.t-=dt;
+        const tg=nearest(s_.x,s_.y,b.range);
+        if(tg){const ta=Math.atan2(tg.y-s_.y,tg.x-s_.x);s_.a+=angDiff(s_.a,ta)*Math.min(1,dt*10);
+          if(s_.t<=0&&Math.abs(angDiff(s_.a,ta))<0.3){s_.t=0.55;shoot(s_.x+Math.cos(s_.a)*14,s_.y+Math.sin(s_.a)*14,s_.a,600,b.dmg,b.range,{r:4});sfx('pew');}}
+        if(s_.life<=0)parts(s_.x,s_.y,6,'#9a8a6a',120,4,0.4);}
+      G.sentries=G.sentries.filter(s_=>s_.life>0);
+    }
   }
   // top
   const t=M.top;
@@ -719,6 +851,7 @@ const ICONS={
   mines:'<circle cx="12" cy="13" r="5"/><path d="M12 4v3M12 19v2M4 13h2M18 13h2M6.5 7.5l2 2M17.5 7.5l-2 2"/>',
   drone:'<circle cx="12" cy="12" r="3"/><circle cx="5" cy="5" r="2.5"/><circle cx="19" cy="5" r="2.5"/><circle cx="5" cy="19" r="2.5"/><circle cx="19" cy="19" r="2.5"/><path d="M7 7l3 3M17 7l-3 3M7 17l3-3M17 17l-3-3"/>',
   turret:'<circle cx="10" cy="14" r="6"/><path d="M14 11l7-5"/>',
+  layer:'<path d="M5 21l7-6 7 6M12 15v-3"/><rect x="6" y="6" width="10" height="6" rx="1.5"/><path d="M16 9h6"/>',
   tesla:'<path d="M13 2 5 14h6l-1 8 8-12h-6z"/>',
   hp:'<path d="M12 20s-7-4.5-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.5-7 10-7 10z"/>',
   speed:'<path d="M4 17a8 8 0 1 1 16 0"/><path d="M12 17l4-6"/>',
@@ -746,6 +879,7 @@ function upgradePool(){
     if(m.id==='flamer')L.push({t:nm,icon:ic,s:k=>[['flame reach',r1(m.range),r1(m.range*(1+0.15*k))]],ap:k=>{m.range*=1+0.15*k;m.lvl++;}});
     if(m.id==='mines'){L.push({t:nm,icon:ic,s:k=>[['blast radius',r1(m.radius),r1(m.radius*(1+0.15*k))]],ap:k=>{m.radius*=1+0.15*k;m.lvl++;}});
       if(m.extra<3)L.push({fix:1,t:nm,icon:ic,s:()=>[['mines per drop',m.extra,m.extra+1]],ap:()=>{m.extra++;m.lvl++;}});}
+    if(m.id==='layer'&&m.extra<4)L.push({fix:1,t:nm,icon:ic,s:()=>[['sentries at once',m.extra+1,m.extra+2]],ap:()=>{m.extra++;m.lvl++;}});
     if(m.id==='drone'&&m.extra<4)L.push({fix:1,t:nm,icon:ic,s:()=>[['drones',m.extra,m.extra+1]],ap:()=>{m.extra++;m.lvl++;G.drones.length=0;}});
     if(m.id==='turret'&&m.shots<3)L.push({fix:1,t:nm,icon:ic,s:()=>[['barrels',m.shots,m.shots+1]],ap:()=>{m.shots++;m.lvl++;}});
     if(m.id==='tesla'&&m.extra<6)L.push({fix:1,t:nm,icon:ic,s:()=>[['targets hit',m.extra+2,m.extra+3]],ap:()=>{m.extra++;m.lvl++;}});
@@ -839,25 +973,41 @@ function endRun(won){
   if(won){SAVE.wins=(SAVE.wins||0)+1;
     if(!SAVE.cleared[md.id]){SAVE.cleared[md.id]=true;const nx=MAPS.find(m=>m.req===md.id);
       if(nx&&!SAVE.maps.includes(nx.id)){SAVE.maps.push(nx.id);unlockMsg=' New battlefield unlocked: '+nx.name+'.';}}}
+  // records
+  const prev=Object.assign({},SAVE.best),now_={time:Math.floor(G.t),gold:Math.floor(p.totalXp),bosses:G.bossKills};
+  for(const k in now_)if(now_[k]>SAVE.best[k])SAVE.best[k]=now_[k];
+  // quests: finish anything this run completed, then fold its stats into stored progress
+  toastQ.length=0;$('#toast').classList.remove('go');
+  checkQuests(false);foldRun(runStats(),SAVE.daily.date);G.rs.on=false;delete SAVE.pendingRun;
+  const qSilver=G.qDone.reduce((s,q)=>s+(q.silver||0),0);
   persist();sfx(won?'win':quit?'click':'over');buzz(won?[40,40,40,40,120]:[120,60,220]);
   $('#overTitle').textContent=won?md.name+' cleared':quit?'Run abandoned':'Your tank was scrapped';
-  $('#overSub').textContent=(won?'All four fortresses fell.':quit?'You keep the silver you earned.':'Destroyed in stage '+G.stage+' of 4.')+' You earned '+silver+' silver.'+unlockMsg;
-  const m=Math.floor(G.t/60),sec=Math.floor(G.t%60);
-  const rows=[['Silver earned','+'+silver],['Silver total',SAVE.silver],['Level',p.level],['Bosses',G.bossKills+' / 4'],['Enemies destroyed',p.kills],['Things eaten',p.eaten],['Time',m+':'+String(sec).padStart(2,'0')],['Captain',G.cap.name.split(' ').pop()]];
+  $('#overSub').textContent=(won?'All four fortresses fell.':quit?'You keep the silver you earned.':'Destroyed in stage '+G.stage+' of 4.')+' You earned '+silver+' silver'+(qSilver?' plus '+qSilver+' from quests':'')+'.'+unlockMsg;
+  const rc=$('#overRecs');rc.innerHTML='';
+  [['Time','time',mmss],['Gold','gold',String],['Bosses','bosses',v=>v+'/4']].forEach(([lab,k,f])=>{
+    const d=document.createElement('div');const isNew=now_[k]>prev[k]&&now_[k]>0;d.className='rec'+(isNew?' new':'');
+    const a_=document.createElement('span');a_.textContent=lab;const b_=document.createElement('b');b_.textContent=f(now_[k]);
+    const c_=document.createElement('small');c_.textContent=isNew?'New best':'Best '+f(prev[k]);d.append(a_,b_,c_);rc.appendChild(d);});
+  const rows=[['Silver earned','+'+(silver+qSilver)],['Silver total',SAVE.silver],['Level',p.level],['Enemies destroyed',p.kills],['Things eaten',p.eaten],['Captain',G.cap.name.split(' ').pop()]];
   const st=$('#overStats');st.innerHTML='';
   rows.forEach(([k,v])=>{const d=document.createElement('div');const a_=document.createElement('span');a_.textContent=k;const b_=document.createElement('b');b_.textContent=v;d.append(a_,b_);st.appendChild(d);});
+  const qd=$('#overQuests');qd.innerHTML='';const h=document.createElement('h4');h.textContent='Quests completed';qd.appendChild(h);
+  if(!G.qDone.length){const e_=document.createElement('p');e_.textContent='None this run. Check the garage for today\'s quests.';qd.appendChild(e_);}
+  G.qDone.forEach(q=>{const d=document.createElement('div');const a_=document.createElement('span');a_.textContent=q.t;
+    const b_=document.createElement('b');b_.textContent=qReward(q);if(q.mod)b_.className='mod';d.append(a_,b_);qd.appendChild(d);});
   setTimeout(()=>$('#over').classList.add('show'),won?600:quit?0:900);
 }
 function showTitle(){
   mode='title';newGame();
   $('#hud').classList.remove('on');$('#over').classList.remove('show');$('#pause').classList.remove('show');hideCards();
   $('#title').classList.add('show');$('#garage').classList.remove('show');
-  const b=SAVE;
-  $('#best').textContent=b.runs?(b.silver+' silver in the bank. Best: '+(b.wins?b.wins+' map clears':'stage '+Math.min(b.stage||1,4))+', level '+(b.level||1)+'. Runs: '+b.runs+'.'):'';
+  const b=SAVE;if(ensureDaily())persist();const dd=SAVE.daily.ids.filter(id=>SAVE.daily.done[id]).length;
+  $('#best').textContent=b.runs?(b.silver+' silver in the bank. Best: '+(b.wins?b.wins+' map clears':'stage '+Math.min(b.stage||1,4))+', level '+(b.level||1)+'. Runs: '+b.runs+'. Daily quests: '+dd+'/3.'):'';
   renderToggles($('#titleToggles'));
 }
 function startRun(){
   newGame(SAVE.selMap,SAVE.selCap);mode='play';
+  if(ensureDaily())persist();G.rs.on=true;
   $('#title').classList.remove('show');$('#garage').classList.remove('show');$('#over').classList.remove('show');$('#hud').classList.add('on');
   $('#hint').style.display='';hintShown=true;
   banner(G.mapDef.name,'Stage 1. Eat, grow, survive. Boss in '+BOSS_AT+' seconds.');
@@ -875,6 +1025,7 @@ function row(title,meta,o){
   return el;
 }
 function renderGarage(){
+  if(ensureDaily())persist();checkQuests(false); // e.g. maps cleared before quests existed
   $('#silverTxt').textContent=SAVE.silver;
   const ml=$('#mapList');ml.innerHTML='';
   MAPS.forEach(m=>{const open=SAVE.maps.includes(m.id);const req=MAPS.find(x=>x.id===m.req);
@@ -889,6 +1040,26 @@ function renderGarage(){
   Object.keys(MOD_COST).forEach(id=>{const own=SAVE.mods.includes(id);const d=MODS[id];
     mo.appendChild(row(d.name+' ('+SLOT_NAME[d.slot]+')',d.desc,{locked:!own,tag:own?'Unlocked':null,price:own?null:MOD_COST[id],
       onBuy:()=>{SAVE.silver-=MOD_COST[id];SAVE.mods.push(id);persist();renderGarage();}}));});
+  Object.keys(QUEST_MODS).forEach(id=>{const own=SAVE.mods.includes(id);const d=MODS[id];const q=MILESTONES.find(m=>m.id===QUEST_MODS[id]);
+    mo.appendChild(row(d.name+' ('+SLOT_NAME[d.slot]+')',own?d.desc:'Milestone reward: '+q.t.toLowerCase()+'.',{locked:!own,tag:own?'Unlocked':'Quest'}));});
+  // quests
+  const dl=$('#dailyList');dl.innerHTML='';activeDaily().forEach(q=>dl.appendChild(questRow(q)));
+  const nx=QDATE?new Date(QDATE):new Date(),mins=Math.max(1,Math.ceil((new Date(nx.getFullYear(),nx.getMonth(),nx.getDate()+1)-nx)/60000));
+  $('#dailyNote').textContent='Three new quests every day. Next ones in '+(mins>=60?Math.floor(mins/60)+'h '+(mins%60)+'m':mins+'m')+'.';
+  const ml_=$('#msList');ml_.innerHTML='';
+  MILESTONES.filter(q=>!SAVE.ms.done[q.id]).concat(MILESTONES.filter(q=>SAVE.ms.done[q.id])).forEach(q=>ml_.appendChild(questRow(q)));
+}
+function questRow(q){
+  const done=!!qStore(q).done[q.id],v=done?q.n:Math.min(q.n,qVal(q,ZR));
+  const el=document.createElement('div');el.className='opt quest'+(done?' done':'');
+  const t=document.createElement('span');t.className='txt';const b=document.createElement('b');b.textContent=q.t;
+  const bar=document.createElement('span');bar.className='qbar';const fi=document.createElement('i');fi.style.width=(100*v/q.n)+'%';bar.appendChild(fi);
+  const m=document.createElement('span');m.className='meta';m.textContent=qFmt(q,v)+' / '+qFmt(q,q.n)+(q.run&&!q.m.startsWith('clear:')?' best run':'');
+  t.append(b,bar,m);el.appendChild(t);
+  const r=document.createElement('span');
+  if(done){r.className='tag';r.textContent='Done';}else{r.className='rew'+(q.mod?' mod':'');r.textContent=q.mod?MODS[q.mod].name:'+'+q.silver;}
+  el.appendChild(r);
+  return el;
 }
 function openGarage(){
   mode='garage';releaseJoy();
@@ -930,7 +1101,7 @@ $('#rollBtn').addEventListener('click',startRun);
 $('#gBack').addEventListener('click',showTitle);
 $('#againBtn').addEventListener('click',startRun);
 $('#menuBtn').addEventListener('click',openGarage);
-document.addEventListener('visibilitychange',()=>{if(document.hidden)pauseGame();});
+document.addEventListener('visibilitychange',()=>{if(document.hidden){snapshotRun();pauseGame();}});
 
 /* ---------- update ---------- */
 function update(dt){
@@ -1053,12 +1224,13 @@ function update(dt){
   G.cam.x+=(lx-G.cam.x)*Math.min(1,dt*5);G.cam.y+=(ly-G.cam.y)*Math.min(1,dt*5);
 
   if(G.pendingBoss!==undefined&&G.pendingBoss>0){G.pendingBoss-=dt;if(G.pendingBoss<=0){G.pendingBoss=undefined;openBossReward();return;}}
+  G.qT-=dt;if(G.qT<=0){G.qT=0.5;checkQuests(true);}
   if(mode==='play'&&G.lvQ.length)openLevel();
 }
 function contact(e,dx,dy,dist,rr){
   const p=G.p,d=e.d;
   if(d.edible>=0&&p.rank>=d.edible&&!d.boss){
-    e.dead=true;p.eaten++;gainXp(d.xp);sfx('eat',d.xp>=9?2:1);p.chomp=d.xp>=5?1:0.5;if(d.xp>=9)buzz(12);
+    e.dead=true;p.eaten++;G.rs.eat[e.type]=(G.rs.eat[e.type]||0)+1;gainXp(d.xp);sfx('eat',d.xp>=9?2:1);p.chomp=d.xp>=5?1:0.5;if(d.xp>=9)buzz(12);
     parts(e.x,e.y,d.neutral?6:5,d.neutral?'#8f7f5f':'#a8432b',140,4,0.35);
     if(d.xp>=5)addText(e.x,e.y-e.r,'+'+d.xp,COL.gold||'#e8ad2c');
     G.shake=Math.min(10,G.shake+(d.xp>=9?2.5:0.6));
@@ -1127,6 +1299,7 @@ function drawTank(p){
   // back module
   const b=M.back;
   if(b&&b.id==='mines'){ctx.fillStyle='#e8ad2c';ctx.fillRect(-s*1.28,-s*0.38,s*0.34,s*0.76);ctx.fillStyle='#1d1a12';for(let i=0;i<3;i++)ctx.fillRect(-s*1.28,-s*0.32+i*s*0.25,s*0.34,s*0.1);}
+  if(b&&b.id==='layer'){ctx.fillStyle='#5d6b4a';rr(-s*1.3,-s*0.4,s*0.4,s*0.8,s*0.1);ctx.fill();ctx.fillStyle='#c9b48a';ctx.beginPath();ctx.arc(-s*1.1,0,s*0.16,0,TAU);ctx.fill();}
   if(b&&b.id==='drone'){ctx.fillStyle='#3d4552';rr(-s*1.3,-s*0.4,s*0.4,s*0.8,s*0.1);ctx.fill();ctx.fillStyle='#9fe0ff';ctx.beginPath();ctx.arc(-s*1.1,0,s*0.14,0,TAU);ctx.fill();}
   ctx.restore();
   // top module (world-aligned rotation)
@@ -1225,6 +1398,8 @@ function render2D(){
   for(const e of G.ents)if(e.d.neutral&&vis(e))drawEnt(e);
   for(const e of G.ents)if(!e.d.neutral&&!e.d.boss&&vis(e))drawEnt(e);
   if(B)drawEnt(B);
+  for(const s_ of G.sentries){ctx.fillStyle='#5d6b4a';ctx.strokeStyle='#1d1a12';ctx.lineWidth=2;ctx.beginPath();ctx.arc(s_.x,s_.y,10,0,TAU);ctx.fill();ctx.stroke();
+    ctx.strokeStyle='#3d4552';ctx.lineWidth=4;ctx.beginPath();ctx.moveTo(s_.x,s_.y);ctx.lineTo(s_.x+Math.cos(s_.a)*16,s_.y+Math.sin(s_.a)*16);ctx.stroke();}
   drawTank(G.p);
   for(const d of G.drones){if(!G.p.modules.back||G.p.modules.back.id!=='drone')break;ctx.fillStyle='#3d4552';ctx.beginPath();ctx.arc(d.x,d.y,7,0,TAU);ctx.fill();ctx.strokeStyle='#9fe0ff';ctx.lineWidth=2;ctx.beginPath();ctx.arc(d.x,d.y,10,G.t*20,G.t*20+2);ctx.stroke();}
   // bullets
@@ -1376,6 +1551,7 @@ function initThree(){
       crate:mkIM(GEO.box,matL,4,true),crateX:mkIM(GEO.box,matL,8,false),
       dropDisc:mkIM(GEO.disc,tmat(0.55),8,false),dropMag:mkIM(GEO.torus,matL,8,true),dropX:mkIM(GEO.box,matL,16,false),
       drone:mkIM(GEO.sph,matL,6,true),droneR:mkIM(GEO.torusF,matB,6,false),
+      sentry:mkIM(GEO.cyl8,matL,8,true),sentryH:mkIM(GEO.box,matL,8,true),sentryB:mkIM(GEO.box,matL,8,false),
       bullet:mkIM(GEO.sph,matB,720,false),streak:mkIM(GEO.box,matB,720,false),
       fireD:mkIM(GEO.disc,tmat(0.85),30,false),fireB:mkIM(GEO.sph,matB,30,false),
       glow:mkIM(GEO.sph,matB,620,false),debris:mkIM(GEO.box,matL,320,false),
@@ -1488,6 +1664,7 @@ function buildPlayer3D(p){
   }
   const b=M.back;
   if(b&&b.id==='mines'){add(root,{g:'box',s:[.34,.42,.78],p:[-1.08,.62,0],c:'#e8ad2c'});for(let i=0;i<3;i++)add(root,{g:'box',s:[.35,.43,.08],p:[-1.08,.62,-.25+i*.25],c:'#1d1a12'});}
+  if(b&&b.id==='layer'){add(root,{g:'box',s:[.4,.4,.8],p:[-1.08,.62,0],c:'#5d6b4a'});add(root,{g:'cyl8',s:[.36,.16,.36],p:[-1.08,.9,0],c:'#c9b48a'});add(root,{g:'box',s:[.36,.08,.08],p:[-1.32,.95,0],c:'#3d4552'});}
   if(b&&b.id==='drone'){add(root,{g:'cyl',s:[.5,.1,.5],p:[-1.05,.95,0],c:'#3d4552'});add(root,{g:'sph',s:[.2,.2,.2],p:[-1.05,1.05,0],c:'#9fe0ff',glow:1});}
   top.position.set(rk>=2?.3:.25,y+.01,0);root.add(top);
   const t=M.top;
@@ -1589,6 +1766,11 @@ function render3D(){
   // drones
   fx.drone.count=0;fx.droneR.count=0;
   if(p.modules.back&&p.modules.back.id==='drone')for(const dn of G.drones){put(fx.drone,dn.x,32,dn.y,0,12,9,12,col3('#3d4552'));put(fx.droneR,dn.x,36,dn.y,G.t*20,22,22,22,col3('#9fe0ff'));}
+  // sentries
+  fx.sentry.count=0;fx.sentryH.count=0;fx.sentryB.count=0;
+  for(const s_ of G.sentries){if(!near(s_))continue;const fade=s_.life<3&&Math.sin(G.t*16)<0;
+    put(fx.sentry,s_.x,5,s_.y,0,22,10,22,col3('#5d6b4a'));put(fx.sentryH,s_.x,14,s_.y,-s_.a,15,8,13,col3(fade?'#fff6e6':'#c9b48a'));
+    put(fx.sentryB,s_.x+Math.cos(s_.a)*11,15,s_.y+Math.sin(s_.a)*11,-s_.a,14,3.5,3.5,col3('#3d4552'));}
   // bullets
   fx.bullet.count=0;fx.streak.count=0;
   for(const b of G.pb){const a=Math.atan2(b.vy,b.vx);put(fx.streak,b.x,13,b.y,-a,b.r*5,b.r*1.1,b.r*1.1,col3(b.col));}
@@ -1696,7 +1878,7 @@ function frame(now){
 }
 showTitle();
 requestAnimationFrame(frame);
-if(window.__SJ_TEST)window.__SJ_TEST({get G(){return G;},get mode(){return mode;},update,render,startRun,joy,openLevel,setMode:m=>{mode=m;},pick:i=>{if(onPick)onPick(lastCards[i%lastCards.length]);},get SAVE(){return SAVE;},openGarage,renderGarage,endRun,audioInit,get R3(){return R3;}});
+if(window.__SJ_TEST)window.__SJ_TEST({get G(){return G;},get mode(){return mode;},update,render,startRun,joy,openLevel,setMode:m=>{mode=m;},pick:i=>{if(onPick)onPick(lastCards[i%lastCards.length]);},get SAVE(){return SAVE;},setSave:o=>{store.set(o);SAVE=loadSave();recoverRun();},setDate:d=>{QDATE=d;},ensureDaily,checkQuests,runStats,snapshotRun,QUESTS:{DAILY,MILESTONES},openGarage,renderGarage,endRun,audioInit,get R3(){return R3;}});
 })();
 </script>
 </body>
