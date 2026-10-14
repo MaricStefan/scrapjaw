@@ -101,7 +101,7 @@ run('iron','lou',true);run('ash','ida',true);run('ash','sid',false);run('iron','
  console.log('abilities ok:',Object.keys(api.AB).join(' '));api.endRun('quit');}
 // --- Main Gun swings up to 45° each way, never further ---
 {api.SAVE.selMap='dust';api.startRun();const G=api.G,P=G.p;P.modules.front=api.mkMod('cannon',1);
- const test=(deg)=>{G.ents=G.ents.filter(e=>e.d.neutral);G.pb.length=0;P.gunO=0;P.v=0;P.a=0;P.modules.front.t=0;
+ const test=(deg)=>{G.ents=G.ents.filter(e=>e.d.neutral);G.spawnT=G.helperT=1e9;G.pb.length=0;P.gunO=0;P.v=0;P.a=0;P.modules.front.t=0;
    api.joy.dx=api.joy.dy=0;
    api.update(0);api.G.ents.push(Object.assign(Object.create(null),{type:'tank',d:{hp:9999,r:16,spd:0,stat:1,contact:0},x:P.x+Math.cos(deg*Math.PI/180)*250,y:P.y+Math.sin(deg*Math.PI/180)*250,hp:9999,max:9999,r:16,a:0,ta:0,t:99,slow:0,hit:0,flash:0,dead:false,st:'walk',pt:2,spin:0,t2:0,t3:0}));
    let shots=0;for(let i=0;i<40;i++){P.v=0;P.a=0;const n=G.pb.length;api.update(1/60);if(G.pb.length>n)shots++;P.hp=P.maxHp;}
