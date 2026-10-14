@@ -21,6 +21,13 @@ async def main():
         await pg.evaluate("__ff(50)");await pg.wait_for_timeout(400);await pg.screenshot(path=str(ROOT/'shots/play.png'))
         await pg.evaluate("()=>{__api.G.rs.eat.scrap=(__api.G.rs.eat.scrap||0)+300;__api.G.qT=0;__ff(0.1);}");await pg.wait_for_timeout(450);await pg.screenshot(path=str(ROOT/'shots/toast.png'))
         await pg.evaluate("__ff(120,true)");await pg.wait_for_timeout(500);await pg.screenshot(path=str(ROOT/'shots/levelup.png'))
+        # abilities: fire two, so one slot shows its cooldown sweep and the rest glow ready
+        await pg.evaluate("()=>{const a=__api;a.pick(0);a.setMode('play');const P=a.G.p;if(!P.modules.top)P.modules.top=a.mkMod('turret',P.wdm);a.useAbility('front');a.useAbility('side');__ff(1.5);a.setMode('play');}")
+        await pg.wait_for_timeout(400);await pg.screenshot(path=str(ROOT/'shots/abilities.png'))
+        # last boss down -> Finish or Overtime
+        await pg.evaluate("""()=>{const a=__api,G=a.G;G.stage=4;G.stageT=74;for(let i=0;i<60*20&&(a.mode==='play'||a.mode==='level');i++){if(a.mode==='level'){a.pick(0);continue;}a.update(1/60);G.p.hp=G.p.maxHp;if(G.boss)a.hurt(G.boss,1e9);}}""")
+        await pg.wait_for_timeout(500);await pg.screenshot(path=str(ROOT/'shots/clear_choice.png'))
+        await pg.evaluate("()=>{__api.pick(1);__ff(40);__api.setMode('play');}");await pg.wait_for_timeout(1200);await pg.screenshot(path=str(ROOT/'shots/overtime.png'))
         await pg.evaluate("()=>{if(__api.mode!=='play'){__api.setMode('play');}__api.endRun(false);}");await pg.wait_for_timeout(1300);await pg.screenshot(path=str(ROOT/'shots/over.png'))
         print('page errors:',errs or 'none')
         await b.close()
