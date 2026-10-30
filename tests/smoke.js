@@ -159,18 +159,19 @@ run('iron','lou',true);run('ash','ida',true);run('ash','sid',false);run('iron','
  for(let i=0;i<60*120;i++){if(api.mode==='play'){api.joy.dx=0;api.joy.dy=0;api.update(1/60);P.hp=P.maxHp;if(G.boss)G.boss=null,G.bossSpawned=true;
    const c=r=>G.ents.filter(e=>!e.dead&&(e.d.base||e.type)===r).length;maxT=Math.max(maxT,c('tank'));maxW=Math.max(maxW,c('tower'));}else api.pick(0);}
  assert.ok(maxT<=4&&maxW<=2,'Greenvale caps: tanks '+maxT+' towers '+maxW);console.log('type caps ok: tanks',maxT,'towers',maxW);api.endRun('quit');}
-// --- Main Gun swings up to 45° each way, never further ---
+// --- Main Gun turret tracks 360° and fires when it's on target ---
 {api.SAVE.selMap='dust';api.startRun();const G=api.G,P=G.p;P.modules.front=api.mkMod('cannon',1);
- const test=(deg)=>{G.ents=G.ents.filter(e=>e.d.neutral);G.spawnT=G.helperT=1e9;G.pb.length=0;P.gunO=0;P.v=0;P.a=0;P.modules.front.t=0;
+ const test=(deg,frames=90)=>{G.ents=G.ents.filter(e=>e.d.neutral);G.spawnT=G.helperT=1e9;G.pb.length=0;P.gunO=0;P.v=0;P.a=0;P.modules.front.t=0;
    api.joy.dx=api.joy.dy=0;
    api.update(0);api.G.ents.push(Object.assign(Object.create(null),{type:'tank',d:{hp:9999,r:16,spd:0,stat:1,contact:0},x:P.x+Math.cos(deg*Math.PI/180)*250,y:P.y+Math.sin(deg*Math.PI/180)*250,hp:9999,max:9999,r:16,a:0,ta:0,t:99,slow:0,hit:0,flash:0,dead:false,st:'walk',pt:2,spin:0,t2:0,t3:0}));
-   let shots=0;for(let i=0;i<40;i++){P.v=0;P.a=0;const n=G.pb.length;api.update(1/60);if(G.pb.length>n)shots++;P.hp=P.maxHp;}
+   let shots=0;for(let i=0;i<frames;i++){P.v=0;P.a=0;const n=G.pb.length;api.update(1/60);if(G.pb.length>n)shots++;P.hp=P.maxHp;}
    return {shots,gun:Math.round(P.gunO*180/Math.PI)};};
- const r35=test(35),r70=test(70),rm35=test(-35);
+ const r35=test(35),r90=test(90),r180=test(180),rm35=test(-35);
  assert.ok(r35.shots>0&&Math.abs(r35.gun-35)<=3,'gun swings 35° and fires '+JSON.stringify(r35));
  assert.ok(rm35.shots>0&&Math.abs(rm35.gun+35)<=3,'and to the other side '+JSON.stringify(rm35));
- assert.ok(r70.shots===0&&Math.abs(r70.gun)<=45,'never past 45° '+JSON.stringify(r70));
- console.log('gun traverse ok:',JSON.stringify({r35,rm35,r70}));api.render();api.endRun('quit');}
+ assert.ok(r90.shots>0&&Math.abs(r90.gun-90)<=4,'turret reaches 90° '+JSON.stringify(r90));
+ assert.ok(r180.shots>0&&Math.abs(Math.abs(r180.gun)-180)<=4,'turret reaches 180° '+JSON.stringify(r180));
+ console.log('gun traverse ok:',JSON.stringify({r35,rm35,r90,r180}));api.render();api.endRun('quit');}
 // --- Ironfield: Foundry enemies spawn (with some Greenvale ones) and every boss mechanic works ---
 {api.SAVE.selMap='iron';api.startRun();const G=api.G,P=G.p;const seen={};
  for(let i=0;i<60*60;i++){if(api.mode==='play'){api.joy.dx=Math.cos(i/90);api.joy.dy=Math.sin(i/70);api.update(1/60);P.hp=P.maxHp;for(const e of G.ents)seen[e.type]=1;if(i%30===0)api.render();}else api.pick(0);}
