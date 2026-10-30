@@ -288,7 +288,7 @@ button:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
       <div class="tr">
       <ul class="how">
         <li>Drag anywhere on screen to steer. Weapons fire by themselves.</li>
-        <li>Each gun only shoots from the side it's mounted on, so turn to aim.</li>
+        <li>The main turret tracks on its own. Other guns only shoot from the side they're mounted on, so turn to aim.</li>
         <li>Drive over anything small enough to eat. Beat a boss to grow and eat bigger things.</li>
         <li>Hit Boost to ram hard or escape. Tap a module's icon to fire its special ability.</li>
       </ul>
@@ -379,7 +379,7 @@ const store={
 
 /* ---------- definitions ---------- */
 const MODS={
-  cannon:   {slot:'front',name:'Main Gun',     desc:'Heavy shells ahead. The gun swings up to 45° left or right to aim.', dmg:24,cd:0.85,range:430},
+  cannon:   {slot:'front',name:'Main Gun',     desc:'A turret that turns all the way around and fires heavy shells.', dmg:24,cd:0.85,range:430},
   plow:     {slot:'front',name:'Ram Plow',     desc:'Shreds whatever is in front and halves ramming damage you take.', dmg:34,cd:0.3,range:0},
   broadside:{slot:'side', name:'Broadside',    desc:'Guns on both flanks fire left and right.', dmg:15,cd:1.0,range:360},
   flamer:   {slot:'side', name:'Side Flamers', desc:'Short burning cones on both flanks.', dmg:6,cd:0.14,range:125},
@@ -417,7 +417,7 @@ const MASTERY={
 const SLOT_NAME={front:'Front',side:'Sides',back:'Rear',top:'Top'};
 const SLOT_KEYS=['front','side','back','top'];
 const MOD_LEVELS=[3,6,10,15];
-const GUN_ARC=Math.PI/4, GUN_TURN=4; // Main Gun traverse: ±45° from the hull's heading, rad/s
+const GUN_TURN=4; // Main Gun turret traverse, rad/s
 
 const EN={
   scrap: {hp:1,  r:9, spd:0,  xp:1, edible:0, neutral:1, stat:1},
@@ -949,14 +949,14 @@ function updateModules(dt){
   // front
   const f=M.front;
   if(f){f.t-=dt;
-    if(f.id==='cannon'){ // the gun swings within ±GUN_ARC of the hull and fires once it's on target
-      const tg=nearest(p.x,p.y,f.range,cone(p.a,GUN_ARC+0.12));
-      const want=tg?clamp(angDiff(p.a,Math.atan2(tg.y-p.y,tg.x-p.x)),-GUN_ARC,GUN_ARC):0;
-      p.gunO+=clamp(want-p.gunO,-GUN_TURN*dt,GUN_TURN*dt);
-      if(f.t<=0&&tg&&Math.abs(want-p.gunO)<0.1){f.t=f.cd;const n=f.shots,ga=p.a+p.gunO,cg=Math.cos(ga),sg=Math.sin(ga);
-        const px=p.x+Math.cos(p.a)*p.r*0.55,py=p.y+Math.sin(p.a)*p.r*0.55;
-        for(let i=0;i<n;i++){const off=(i-(n-1)/2);shoot(px+cg*p.r*0.95-sg*off*p.r*0.22,py+sg*p.r*0.95+cg*off*p.r*0.22,ga+off*0.06,640,f.dmg,f.range,{r:6,pierce:f.extra-1});}
-        parts(px+cg*p.r*1.15,py+sg*p.r*1.15,7,'#ffcf6a',200,6,0.18);p.recoil=1;sfx('cannon');G.shake=Math.min(14,G.shake+0.7);
+    if(f.id==='cannon'){ // turret tracks 360° and fires once it's on target
+      const tg=nearest(p.x,p.y,f.range);
+      const want=tg?angDiff(p.a,Math.atan2(tg.y-p.y,tg.x-p.x)):0;
+      p.gunO+=clamp(angDiff(p.gunO,want),-GUN_TURN*dt,GUN_TURN*dt);
+      if(f.t<=0&&tg&&Math.abs(angDiff(p.gunO,want))<0.1){f.t=f.cd;const n=f.shots,ga=p.a+p.gunO,cg=Math.cos(ga),sg=Math.sin(ga);
+        const px=p.x+Math.cos(p.a)*p.r*0.15,py=p.y+Math.sin(p.a)*p.r*0.15;
+        for(let i=0;i<n;i++){const off=(i-(n-1)/2);shoot(px+cg*p.r*1.05-sg*off*p.r*0.22,py+sg*p.r*1.05+cg*off*p.r*0.22,ga+off*0.06,640,f.dmg,f.range,{r:6,pierce:f.extra-1});}
+        parts(px+cg*p.r*1.2,py+sg*p.r*1.2,7,'#ffcf6a',200,6,0.18);p.recoil=1;sfx('cannon');G.shake=Math.min(14,G.shake+0.7);
         if(f.mastery==='p'&&!f.echoing)f.echo=0.14;}
       if(f.echo>0){f.echo-=dt;if(f.echo<=0){f.echoing=true;f.t=0;f.echo=0;}}else if(f.echoing&&f.t>0)f.echoing=false;
     }
@@ -1056,7 +1056,7 @@ function castAbility(slot){
   const v=AB[m.id].v(m,A.pow),ca=Math.cos(p.a),sa=Math.sin(p.a);let ok=true;
   const foes=()=>G.ents.filter(e=>!e.dead&&!e.d.neutral);
   if(m.id==='cannon'){
-    const ga=aimDir(p.a+p.gunO),cg=Math.cos(ga),sg=Math.sin(ga),px=p.x+ca*p.r*0.55,py=p.y+sa*p.r*0.55;p.gunO=clamp(angDiff(p.a,ga),-GUN_ARC,GUN_ARC);
+    const ga=aimDir(p.a+p.gunO),cg=Math.cos(ga),sg=Math.sin(ga),px=p.x+ca*p.r*0.15,py=p.y+sa*p.r*0.15;p.gunO=angDiff(p.a,ga);
     shoot(px+cg*p.r*1.05,py+sg*p.r*1.05,ga,760,v,m.range*1.5,{r:13,pierce:99,col:'#ff8a2a'});
     if(MA)for(let d=60;d<m.range*1.5;d+=55)G.burns.push({x:px+cg*d,y:py+sg*d,r:24,life:4,max:4,dps:m.dmg*1.5});
     if(G.burns.length>44)G.burns.splice(0,G.burns.length-44);
@@ -1779,9 +1779,8 @@ function drawTank(p){
     if(sd.id==='broadside'){ctx.fillStyle='#3d4552';for(let i=0;i<sd.shots;i++){const x=(i-(sd.shots-1)/2)*s*0.45;ctx.fillRect(x-s*0.07,side>0?s*0.9:-s*1.4,s*0.14,s*0.5);ctx.fillRect(x-s*0.14,side>0?s*0.88:-s*1.02,s*0.28,s*0.14);}}
     else{ctx.fillStyle='#8a3a1e';ctx.fillRect(-s*0.2,side>0?s*0.95:-s*1.25,s*0.4,s*0.3);ctx.fillStyle='#ffb02e';ctx.fillRect(-s*0.1,side>0?s*1.2:-s*1.32,s*0.2,s*0.12);}
   }}
-  // front module
+  // front module (plow stays on the hull; the main turret is drawn after the body)
   const f=M.front;
-  if(f&&f.id==='cannon'){ctx.save();ctx.translate(s*0.45,0);ctx.rotate(p.gunO);ctx.fillStyle='#3d4552';for(let i=0;i<f.shots;i++){const y=(i-(f.shots-1)/2)*s*0.24;rr(s*0.05-(p.recoil||0)*s*0.3,y-s*0.08,s*1.15,s*0.16,s*0.04);ctx.fill();}ctx.restore();}
   if(f&&f.id==='plow'){ctx.fillStyle='#7a8290';ctx.strokeStyle=COL.ink;ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(s*0.85,-s*1.05);ctx.lineTo(s*1.4,-s*0.2);ctx.lineTo(s*1.4,s*0.2);ctx.lineTo(s*0.85,s*1.05);ctx.closePath();ctx.fill();ctx.stroke();
     ctx.fillStyle='#d9d2c0';for(let i=-2;i<=2;i++){ctx.beginPath();ctx.moveTo(s*1.4,i*s*0.3-s*0.08);ctx.lineTo(s*1.62,i*s*0.3);ctx.lineTo(s*1.4,i*s*0.3+s*0.08);ctx.fill();}}
   // body
@@ -1795,6 +1794,8 @@ function drawTank(p){
   if(b&&b.id==='mines'){ctx.fillStyle='#e8ad2c';ctx.fillRect(-s*1.28,-s*0.38,s*0.34,s*0.76);ctx.fillStyle='#1d1a12';for(let i=0;i<3;i++)ctx.fillRect(-s*1.28,-s*0.32+i*s*0.25,s*0.34,s*0.1);}
   if(b&&b.id==='layer'){ctx.fillStyle='#5d6b4a';rr(-s*1.3,-s*0.4,s*0.4,s*0.8,s*0.1);ctx.fill();ctx.fillStyle='#c9b48a';ctx.beginPath();ctx.arc(-s*1.1,0,s*0.16,0,TAU);ctx.fill();}
   if(b&&b.id==='drone'){ctx.fillStyle='#3d4552';rr(-s*1.3,-s*0.4,s*0.4,s*0.8,s*0.1);ctx.fill();ctx.fillStyle='#9fe0ff';ctx.beginPath();ctx.arc(-s*1.1,0,s*0.14,0,TAU);ctx.fill();}
+  if(f&&f.id==='cannon'){ctx.save();ctx.translate(s*0.15,0);ctx.rotate(p.gunO);ctx.fillStyle='#7d6a4c';ctx.strokeStyle='#1d1a12';ctx.lineWidth=2;ctx.beginPath();ctx.arc(0,0,s*0.42,0,TAU);ctx.fill();ctx.stroke();
+    ctx.fillStyle='#3d4552';for(let i=0;i<f.shots;i++){const y=(i-(f.shots-1)/2)*s*0.24;rr(s*0.2-(p.recoil||0)*s*0.3,y-s*0.08,s*1.15,s*0.16,s*0.04);ctx.fill();}ctx.restore();}
   ctx.restore();
   // top module (world-aligned rotation)
   ctx.save();ctx.translate(p.x,p.y);
@@ -2209,9 +2210,11 @@ function buildPlayer3D(p){
   const nC=[0,2,4,6][rk];
   for(let i=0;i<nC;i++){const side=i%2?1:-1,x=.35-Math.floor(i/2)*.32;
     add(root,{g:'cyl',s:[.13,.2,.13],p:[x,stackBase+.1,side*.38],c:'#5a6b8a'});add(root,{g:'sph',s:[.12,.12,.12],p:[x,stackBase+.26,side*.38],c:'#e8c9a0'});}
-  const f=M.front;
-  if(f&&f.id==='cannon'){root.add(barrels);barrels.position.x=.55;add(barrels,{g:'box',s:[.34,.24,.3+.26*(f.shots-1)],p:[0,.78,0],c:IRON});
-    for(let i=0;i<f.shots;i++)add(barrels,{g:'cyl',s:[.17,1.15,.17],p:[.5,.78,(i-(f.shots-1)/2)*.26],r:[0,0,HALF],c:'#3d4552'});}
+  const f=M.front;const turret=new T.Group();
+  if(f&&f.id==='cannon'){turret.position.set(.18,0,0);root.add(turret);turret.add(barrels);
+    add(turret,{g:'cyl',s:[.92,.3,.92],p:[0,.88,0],c:'#6b5a48'});add(turret,{g:'cyl',s:[.7,.22,.7],p:[0,1.08,0],c:'#7d6a4c'});
+    add(turret,{g:'box',s:[.4,.26,.36+.26*(f.shots-1)],p:[.2,.98,0],c:IRON});
+    for(let i=0;i<f.shots;i++)add(barrels,{g:'cyl',s:[.15,1.35,.15],p:[.9,.98,(i-(f.shots-1)/2)*.26],r:[0,0,HALF],c:'#3d4552'});}
   if(f&&f.id==='plow'){add(root,{g:'box',s:[.2,.6,2.1],p:[1.05,.45,0],c:'#7a8290'});for(let i=-2;i<=2;i++)add(root,{g:'cone',s:[.16,.38,.16],p:[1.3,.45,i*.38],r:[0,0,-HALF],c:'#d9d2c0'});}
   const sd=M.side;
   if(sd)for(const sz of [-1,1]){
@@ -2228,7 +2231,7 @@ function buildPlayer3D(p){
   else if(t&&t.id==='tesla'){add(top,{g:'cyl',s:[.66,.28,.66],p:[0,.14,0],c:'#2a3240'});add(top,{g:'torusF',s:[.6,.6,.6],p:[0,.4,0],c:'#8fd8ff',glow:1});add(top,{g:'sph',s:[.26,.26,.26],p:[0,.48,0],c:'#d6f3ff',glow:1});}
   const flame=add(root,{g:'cone',s:[.5,.8,.5],p:[-1.45,.62,0],r:[0,0,HALF],c:'#ff9b2e',glow:1});flame.visible=false;
   R3.scene.add(root);
-  R3.player={root,top,barrels,hull,flame,stacks};
+  R3.player={root,top,barrels,turret:f&&f.id==='cannon'?turret:null,hull,flame,stacks};
 }
 function buildBoss3D(e){
   const T=R3.T;
@@ -2266,7 +2269,8 @@ function render3D(){
   if(key!==R3.key){R3.key=key;buildPlayer3D(p);}
   const P=R3.player,ch=p.chomp||0;
   P.root.position.set(p.x,0,p.y);P.root.rotation.y=-p.a;P.root.scale.set(p.r*(1+ch*.1),p.r*(1-ch*.08),p.r*(1+ch*.1));
-  P.top.rotation.y=-(p.turA-p.a);const go=p.gunO,rk_=(p.recoil||0)*0.3;P.barrels.rotation.y=-go;P.barrels.position.set(.55-Math.cos(go)*rk_,0,-Math.sin(go)*rk_);
+  P.top.rotation.y=-(p.turA-p.a);const go=p.gunO,rk_=(p.recoil||0)*0.3;
+  if(P.turret){P.turret.rotation.y=-go;P.barrels.position.set(-rk_,0,0);}
   P.hull.material.color.set(p.hurt>0?'#fff6e6':R3.hullCol||'#b8966a');
   P.flame.visible=p.nitro>0;if(p.nitro>0)P.flame.scale.set(.5,.7+Math.random()*.5,.5);
   if(mode==='play'){flattenTrees(p);
