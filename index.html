@@ -540,6 +540,40 @@ const CHASSIS=[
   {id:'scout',name:'Scout',perk:'25% less HP, 20% faster, smaller hull.',cost:600,ap:p=>{p.maxHp=Math.round(p.maxHp*0.75);p.hp=p.maxHp;p.spdMult*=1.2;p.rMul=0.85;}},
   {id:'bulwark',name:'Bulwark',perk:'40% more HP, 15% slower, starts bulky.',cost:800,ap:p=>{p.maxHp=Math.round(p.maxHp*1.4);p.hp=p.maxHp;p.spdMult*=0.85;p.bulk+=4;p.rMul=1.08;}},
 ];
+// tank lines: each chassis starts as a real tank. After each boss, Engine overhaul moves you one tier up the speed line (s), Armor plating up the armor line (a)
+const LINES={
+  standard:{base:'t34',  s:['t34_85','t44','t54'],                a:['jumbo','pershing','patton'],           sn:'Soviet mediums', an:'American mediums'},
+  scout:   {base:'amx13',s:['amx13_90','amx13_105','amx13_ss11'], a:['chaffee','bulldog','ags'],             sn:'French lights',  an:'American lights'},
+  bulwark: {base:'kv1',  s:['kv1s','is2','is3'],                  a:['churchill','blackprince','conqueror'], sn:'Soviet heavies', an:'British heavies'},
+};
+// our own low-poly builds of real historical tanks, as shape settings for tankMesh3D (defaults there).
+// L/W hull length/half width, th track height, hw/hh upper hull, gl glacis, wh/wr road wheels, sk skirts, eng 'f' = engine in front,
+// t turret shape (cast/dome/hex/box/osc), tx/tr/tH turret place/radius/height, gun/gt barrel, mb muzzle brake, bu bustle, cu cupola, fu fuel drums, ad add-on armor, mi missiles
+const NAT={fr:'#c0a774',us:'#a39561',su:'#7f9461',uk:'#a3a07c'};
+const TANKS={
+  t34:        {n:'T-34',          c:NAT.su,L:2.3, hw:1.75,hh:.36,gl:.55,wh:5,wr:.27,t:'hex', tx:.15,tr:.45,tH:.34,gun:1.25,gt:.13,fu:1,cu:.8},
+  t34_85:     {n:'T-34-85',       c:NAT.su,L:2.3, hw:1.75,hh:.36,gl:.55,wh:5,wr:.27,t:'cast',tx:.15,tr:.5, tH:.38,gun:1.6, gt:.15,fu:1,cu:1},
+  t44:        {n:'T-44',          c:NAT.su,L:2.35,hw:1.8, hh:.32,gl:.5, wh:5,wr:.26,t:'cast',tx:0,  tr:.56,tH:.36,gun:1.65,gt:.15,cu:1},
+  t54:        {n:'T-54',          c:NAT.su,L:2.4, hw:1.8, hh:.32,gl:.55,wh:5,wr:.26,t:'dome',tx:.1, tr:.6, tH:.38,gun:1.75,gt:.16,fu:1},
+  jumbo:      {n:'Sherman Jumbo', c:NAT.us,L:2.25,W:.95,hw:1.65,hh:.5,gl:.4,wh:6,wr:.2,t:'cast',tx:.1, tr:.54,tH:.44,gun:1.3, gt:.16,ad:1,cu:1},
+  pershing:   {n:'M26 Pershing',  c:NAT.us,L:2.4, hw:1.75,hh:.42,gl:.45,wh:6,wr:.22,t:'cast',tx:.1, tr:.54,tH:.42,gun:1.75,gt:.16,mb:1,bu:1,cu:1},
+  patton:     {n:'M48 Patton',    c:NAT.us,L:2.45,W:1.05,hw:1.85,hh:.4,gl:.5,wh:6,wr:.23,t:'dome',tx:.05,tr:.66,tH:.42,gun:1.75,gt:.17,cu:1.4},
+  amx13:      {n:'AMX-13/75',     c:NAT.fr,L:2.1, W:.85,hw:1.45,hh:.3,gl:.6,wh:5,wr:.2,t:'osc', tx:-.35,tr:.42,tH:.42,gun:1.5,gt:.12,eng:'f'},
+  amx13_90:   {n:'AMX-13/90',     c:NAT.fr,L:2.1, W:.85,hw:1.45,hh:.3,gl:.6,wh:5,wr:.2,t:'osc', tx:-.35,tr:.44,tH:.42,gun:1.65,gt:.14,mb:1,eng:'f'},
+  amx13_105:  {n:'AMX-13/105',    c:NAT.fr,L:2.15,W:.85,hw:1.45,hh:.3,gl:.6,wh:5,wr:.2,t:'osc', tx:-.35,tr:.47,tH:.44,gun:1.75,gt:.16,mb:1,eng:'f'},
+  amx13_ss11: {n:'AMX-13 SS.11',  c:NAT.fr,L:2.15,W:.85,hw:1.45,hh:.3,gl:.6,wh:5,wr:.2,t:'osc', tx:-.35,tr:.47,tH:.44,gun:1.65,gt:.14,mb:1,mi:1,eng:'f'},
+  chaffee:    {n:'M24 Chaffee',   c:NAT.us,L:2.2, W:.9,hw:1.6,hh:.36,gl:.45,wh:5,wr:.21,t:'cast',tx:.15,tr:.44,tH:.34,gun:1.35,gt:.12,cu:1},
+  bulldog:    {n:'M41 Walker Bulldog',c:NAT.us,L:2.25,W:.95,hw:1.7,hh:.38,gl:.45,wh:5,wr:.22,t:'cast',tx:.1,tr:.5,tH:.36,gun:1.5,gt:.14,mb:1,bu:1,cu:1},
+  ags:        {n:'M8 AGS',        c:NAT.us,L:2.3, hw:1.8, hh:.42,gl:.4, sk:1,t:'box', tx:.05,tr:.5, tH:.34,gun:1.6, gt:.15,ad:1,bu:1},
+  kv1:        {n:'KV-1',          c:NAT.su,L:2.4, W:1.05,hw:1.9,hh:.48,gl:.35,wh:6,wr:.2,t:'box', tx:.1, tr:.55,tH:.48,gun:1.25,gt:.14},
+  kv1s:       {n:'KV-1S',         c:NAT.su,L:2.4, W:1.05,hw:1.9,hh:.44,gl:.38,wh:6,wr:.2,t:'cast',tx:.1, tr:.54,tH:.42,gun:1.35,gt:.14,cu:1},
+  is2:        {n:'IS-2',          c:NAT.su,L:2.5, W:1.05,hw:1.85,hh:.42,gl:.5,wh:6,wr:.21,t:'cast',tx:.15,tr:.58,tH:.44,gun:1.8,gt:.18,mb:1,bu:1,fu:1,cu:1},
+  is3:        {n:'IS-3',          c:NAT.su,L:2.5, W:1.05,hw:1.85,hh:.38,gl:.7,wh:6,wr:.21,t:'dome',tx:.05,tr:.66,tH:.36,gun:1.85,gt:.18,mb:1},
+  churchill:  {n:'Churchill',     c:NAT.uk,L:2.5, W:1.05,th:.78,hw:1.4,hh:.3,gl:.25,wh:0,t:'box', tx:.2, tr:.5, tH:.44,gun:1.2, gt:.13,cu:1},
+  blackprince:{n:'Black Prince',  c:NAT.uk,L:2.6, W:1.1,th:.8,hw:1.5,hh:.32,gl:.25,wh:0,t:'box', tx:.15,tr:.62,tH:.46,gun:1.7, gt:.16,cu:1},
+  conqueror:  {n:'Conqueror',     c:NAT.uk,L:2.6, W:1.1,hw:1.95,hh:.46,gl:.45,sk:1,t:'box', tx:.05,tr:.66,tH:.5, gun:1.9, gt:.19,bu:1,cu:1.8},
+};
+const tankId=p=>{const L=LINES[p.chassis]||LINES.standard;return p.tier&&p.tline?L[p.tline][Math.min(3,p.tier)-1]:L.base;};
 const hasCrew=id=>!!(G&&G.crew===id);
 // workshop: owning any item in a category opens its tier 2, owning three opens tier 3. mod = a module unlock, the rest are permanent perks
 const WORKSHOP=[
@@ -674,7 +708,7 @@ recoverRun();
 let G=null, mode='title';
 function newPlayer(){
   return {x:WORLD/2,y:WORLD/2,a:-Math.PI/2,v:0,hp:120,maxHp:120,rank:0,r:20,baseSpeed:175,spdMult:1,turn:3.1,turnMult:1,
-    ramDmg:28,magnet:95,gunO:0,bulk:0,rMul:1,chassis:'standard',hitT:0,armor:0,level:1,xp:0,xpNext:6,nitro:0,nitroCd:0,nitroMax:7,hurt:0,odo:0,turA:0,
+    ramDmg:28,magnet:95,gunO:0,bulk:0,rMul:1,chassis:'standard',tier:0,tline:'',hitT:0,armor:0,level:1,xp:0,xpNext:6,nitro:0,nitroCd:0,nitroMax:7,hurt:0,odo:0,turA:0,
     modules:{front:mkMod('cannon'),side:null,back:null,top:null},kills:0,eaten:0,iframes:0,rerolls:2,wdm:1,taken:1,luck:0,silverMult:1,totalXp:0};
 }
 function mkMod(id,wdm){const d=MODS[id];return {id,lvl:1,dmg:d.dmg*(wdm||1),cd:d.cd*(hasPerk('loaders')?0.92:1)*(hasCrew('loader')?0.9:1),range:(d.range||0)*(hasCrew('spotter')?1.15:1),radius:d.radius||0,shots:1,extra:1,t:0,act:0,ab:{cd:AB[id].cd,t:0,pow:0}};}
@@ -1232,13 +1266,14 @@ function openBossReward(){
     },false);
     return;}
   mode='boss';
+  const LN=LINES[p.chassis]||LINES.standard,next=l=>TANKS[LN[l][Math.min(3,p.tier+1)-1]].n;
   const cards=[
-    {rar:'b',t:'Armor plating',icon:'armor',stats:[['max HP',r1(p.maxHp),r1(p.maxHp+40)],['hull',r1(p.hp),r1(Math.min(p.maxHp+40,p.hp+(p.maxHp+40)*0.4))],['tank size',r1(tankR(newRank,p.bulk)*p.rMul),r1(tankR(newRank,p.bulk+BULK.armorBoss)*p.rMul)]],ap:()=>{p.maxHp+=40;p.hp=Math.min(p.maxHp,p.hp+p.maxHp*0.4);p.bulk+=BULK.armorBoss;}},
-    {rar:'b',t:'Engine overhaul',icon:'engine',stats:[['top speed',r1(p.baseSpeed*p.spdMult),r1(p.baseSpeed*p.spdMult*1.12)],['turning',(p.turn*p.turnMult).toFixed(1),(p.turn*p.turnMult*1.15).toFixed(1)],['tank size',r1(tankR(newRank,p.bulk)*p.rMul),r1(tankR(newRank,Math.max(0,p.bulk+BULK.engineBoss))*p.rMul)]],ap:()=>{p.spdMult*=1.12;p.turnMult*=1.15;p.bulk=Math.max(0,p.bulk+BULK.engineBoss);}},
+    {rar:'b',t:'Armor plating',line:'a',desc:'Becomes the '+next('a')+' ('+LN.an+').',icon:'armor',stats:[['max HP',r1(p.maxHp),r1(p.maxHp+40)],['hull',r1(p.hp),r1(Math.min(p.maxHp+40,p.hp+(p.maxHp+40)*0.4))],['tank size',r1(tankR(newRank,p.bulk)*p.rMul),r1(tankR(newRank,p.bulk+BULK.armorBoss)*p.rMul)]],ap:()=>{p.maxHp+=40;p.hp=Math.min(p.maxHp,p.hp+p.maxHp*0.4);p.bulk+=BULK.armorBoss;}},
+    {rar:'b',t:'Engine overhaul',line:'s',desc:'Becomes the '+next('s')+' ('+LN.sn+').',icon:'engine',stats:[['top speed',r1(p.baseSpeed*p.spdMult),r1(p.baseSpeed*p.spdMult*1.12)],['turning',(p.turn*p.turnMult).toFixed(1),(p.turn*p.turnMult*1.15).toFixed(1)],['tank size',r1(tankR(newRank,p.bulk)*p.rMul),r1(tankR(newRank,Math.max(0,p.bulk+BULK.engineBoss))*p.rMul)]],ap:()=>{p.spdMult*=1.12;p.turnMult*=1.15;p.bulk=Math.max(0,p.bulk+BULK.engineBoss);}},
   ];
   showCards('Fortress destroyed','Your tank grows to rank '+newRank+'. You can now devour '+RANK_EATS[newRank]+'.',cards,c=>{
-    c.ap();p.rank=newRank;sfx('level');G.stage++;G.stageT=0;G.bossSpawned=false;G.bossT=0;G.chestT=rnd(20,40);
-    hideCards();resume();banner('Stage '+G.stage,'Boss in '+BOSS_AT+' seconds.');
+    c.ap();p.rank=newRank;p.tier++;p.tline=c.line;sfx('level');G.stage++;G.stageT=0;G.bossSpawned=false;G.bossT=0;G.chestT=rnd(20,40);
+    hideCards();resume();banner('Stage '+G.stage,'Now driving the '+TANKS[tankId(p)].n+'. Boss in '+BOSS_AT+' seconds.');
   },false);
 }
 
@@ -1468,7 +1503,8 @@ function renderGarage(){
       onBuy:()=>{SAVE.silver-=c.cost;SAVE.crew.push(c.id);SAVE.selCrew=c.id;persist();renderGarage();}}));});
   const chl=$('#chassisList');chl.innerHTML='';
   CHASSIS.forEach(c=>{const own=SAVE.chassis.includes(c.id);
-    chl.appendChild(row(c.name,c.perk,{sel:SAVE.selChassis===c.id,locked:!own,price:own?null:c.cost,
+    const LN=LINES[c.id];
+    chl.appendChild(row(c.name,c.perk+' Starts as the '+TANKS[LN.base].n+', then grows into '+LN.sn+' or '+LN.an+'.',{sel:SAVE.selChassis===c.id,locked:!own,price:own?null:c.cost,
       onSel:own?()=>{SAVE.selChassis=c.id;persist();renderGarage();}:null,
       onBuy:()=>{SAVE.silver-=c.cost;SAVE.chassis.push(c.id);SAVE.selChassis=c.id;persist();renderGarage();}}));});
   const cl=$('#capList');cl.innerHTML='';
@@ -1784,7 +1820,7 @@ function drawTank(p){
   if(f&&f.id==='plow'){ctx.fillStyle='#7a8290';ctx.strokeStyle=COL.ink;ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(s*0.85,-s*1.05);ctx.lineTo(s*1.4,-s*0.2);ctx.lineTo(s*1.4,s*0.2);ctx.lineTo(s*0.85,s*1.05);ctx.closePath();ctx.fill();ctx.stroke();
     ctx.fillStyle='#d9d2c0';for(let i=-2;i<=2;i++){ctx.beginPath();ctx.moveTo(s*1.4,i*s*0.3-s*0.08);ctx.lineTo(s*1.62,i*s*0.3);ctx.lineTo(s*1.4,i*s*0.3+s*0.08);ctx.fill();}}
   // body
-  ctx.fillStyle=p.hurt>0?'#f2e6c8':COL.olive;ctx.strokeStyle='#1d1a12';ctx.lineWidth=2.5;
+  const TC=TANKS[tankId(p)].c;ctx.fillStyle=p.hurt>0?'#f2e6c8':TC;ctx.strokeStyle='#1d1a12';ctx.lineWidth=2.5;
   rr(-s*0.95,-s*0.62,s*1.9,s*1.24,s*0.18);ctx.fill();ctx.stroke();
   ctx.fillStyle='rgba(0,0,0,.15)';rr(-s*0.95,s*0.3,s*1.9,s*0.32,s*0.1);ctx.fill();
   // rank chevrons
@@ -1794,7 +1830,7 @@ function drawTank(p){
   if(b&&b.id==='mines'){ctx.fillStyle='#e8ad2c';ctx.fillRect(-s*1.28,-s*0.38,s*0.34,s*0.76);ctx.fillStyle='#1d1a12';for(let i=0;i<3;i++)ctx.fillRect(-s*1.28,-s*0.32+i*s*0.25,s*0.34,s*0.1);}
   if(b&&b.id==='layer'){ctx.fillStyle='#5d6b4a';rr(-s*1.3,-s*0.4,s*0.4,s*0.8,s*0.1);ctx.fill();ctx.fillStyle='#c9b48a';ctx.beginPath();ctx.arc(-s*1.1,0,s*0.16,0,TAU);ctx.fill();}
   if(b&&b.id==='drone'){ctx.fillStyle='#3d4552';rr(-s*1.3,-s*0.4,s*0.4,s*0.8,s*0.1);ctx.fill();ctx.fillStyle='#9fe0ff';ctx.beginPath();ctx.arc(-s*1.1,0,s*0.14,0,TAU);ctx.fill();}
-  if(f&&f.id==='cannon'){ctx.save();ctx.translate(s*0.15,0);ctx.rotate(p.gunO);ctx.fillStyle='#7d6a4c';ctx.strokeStyle='#1d1a12';ctx.lineWidth=2;ctx.beginPath();ctx.arc(0,0,s*0.42,0,TAU);ctx.fill();ctx.stroke();
+  if(f&&f.id==='cannon'){ctx.save();ctx.translate(s*0.15,0);ctx.rotate(p.gunO);ctx.fillStyle=TC;ctx.strokeStyle='#1d1a12';ctx.lineWidth=2;ctx.beginPath();ctx.arc(0,0,s*0.42,0,TAU);ctx.fill();ctx.stroke();
     ctx.fillStyle='#3d4552';for(let i=0;i<f.shots;i++){const y=(i-(f.shots-1)/2)*s*0.24;rr(s*0.2-(p.recoil||0)*s*0.3,y-s*0.08,s*1.15,s*0.16,s*0.04);ctx.fill();}ctx.restore();}
   ctx.restore();
   // top module (world-aligned rotation)
@@ -2182,56 +2218,72 @@ function meshFrom(def,T){
   const m=new T.Mesh(R3.GEO[def.g],mat);m.scale.set(...def.s);m.position.set(...def.p);if(def.r)m.rotation.set(...def.r);
   m.castShadow=!def.glow;if(def.name)m.name=def.name;return m;
 }
-function buildPlayer3D(p){
-  const T=R3.T;
-  if(R3.player){R3.scene.remove(R3.player.root);R3.player.root.traverse(o=>{if(o.material)o.material.dispose();});}
-  const root=new T.Group(),top=new T.Group(),barrels=new T.Group();
+// one tank from its TANKS shape settings plus the fitted modules. x forward, z sideways, about 2.3 long (the group is scaled by the hull radius)
+function tankMesh3D(S,M){
+  const T=R3.T,root=new T.Group(),top=new T.Group(),barrels=new T.Group(),turret=new T.Group();
   const add=(par,def)=>{const m=meshFrom(def,T);par.add(m);return m;};
-  const M=p.modules,rk=p.rank;
-  const HULL=p.chassis==='scout'?'#8f9a62':p.chassis==='bulwark'?'#8a7a62':'#b8966a',IRON='#3d3530',PLATE='#c9b48a',RED='#b8332a';
-  R3.hullCol=HULL;
-  add(root,{g:'box',s:[2.3,.5,.45],p:[0,.25,-.76],c:'#2f2a24'});add(root,{g:'box',s:[2.3,.5,.45],p:[0,.25,.76],c:'#2f2a24'});
-  for(const z of [-1,1])for(let i=0;i<4;i++)add(root,{g:'cyl',s:[.34,.08,.34],p:[-.8+i*.53,.25,z*.99],r:[HALF,0,0],c:'#6b5a48'});
-  const hull=add(root,{g:'box',s:[1.9,.55,1.25],p:[0,.62,0],c:HULL});
-  if(p.chassis==='bulwark')for(const z of [-1,1]){add(root,{g:'box',s:[1.7,.42,.12],p:[0,.6,z*.86],c:IRON});for(let i=0;i<3;i++)add(root,{g:'box',s:[.12,.12,.06],p:[-.55+i*.55,.72,z*.93],c:'#c9b48a'});}
-  if(p.chassis==='scout')for(const z of [-1,1])add(root,{g:'box',s:[.5,.06,.3],p:[-.85,.95,z*.45],r:[z*.3,0,0],c:IRON});
-  add(root,{g:'box',s:[1.94,.08,1.29],p:[0,.6,0],c:IRON});
-  let y=.89;
-  add(root,{g:'box',s:[1.26,.06,1.0],p:[-.2,y+.03,0],c:IRON});
-  add(root,{g:'box',s:[1.2,.36,.95],p:[-.2,y+.24,0],c:PLATE});y+=.42;
-  const stackBase=y;
-  if(rk>=1){add(root,{g:'box',s:[.78,.32,.72],p:[-.3,y+.16,0],c:HULL});
-    for(const z of [-.42,.42])add(root,{g:'cyl8',s:[.3,.52,.3],p:[.32,y+.26,z],c:PLATE});y+=.32;}
-  if(rk>=2)add(root,{g:'pyr',s:[.9,.46,.9],p:[-.3,y+.23,0],r:[0,Math.PI/4,0],c:RED});
-  if(rk>=3){for(const z of [-1,1])for(let i=0;i<5;i++)add(root,{g:'cone',s:[.12,.3,.12],p:[-.9+i*.45,.32,z*1.06],r:[z*HALF,0,0],c:'#d8d0c2'});
-    add(root,{g:'box',s:[.14,.5,1.32],p:[1.0,.56,0],c:IRON});}
-  const stacks=[];const nS=rk>=3?3:rk>=1?2:1,sh=rk>=2?.75:.55,sr=rk>=3?.24:.19;
-  for(let i=0;i<nS;i++){const z=(i-(nS-1)/2)*.3;add(root,{g:'cyl',s:[sr,sh,sr],p:[-.72,stackBase+sh/2,z],c:'#2a2624'});stacks.push({x:-.72,y:stackBase+sh,z});}
-  const nC=[0,2,4,6][rk];
-  for(let i=0;i<nC;i++){const side=i%2?1:-1,x=.35-Math.floor(i/2)*.32;
-    add(root,{g:'cyl',s:[.13,.2,.13],p:[x,stackBase+.1,side*.38],c:'#5a6b8a'});add(root,{g:'sph',s:[.12,.12,.12],p:[x,stackBase+.26,side*.38],c:'#e8c9a0'});}
-  const f=M.front;const turret=new T.Group();
-  if(f&&f.id==='cannon'){turret.position.set(.18,0,0);root.add(turret);turret.add(barrels);
-    add(turret,{g:'cyl',s:[.92,.3,.92],p:[0,.88,0],c:'#6b5a48'});add(turret,{g:'cyl',s:[.7,.22,.7],p:[0,1.08,0],c:'#7d6a4c'});
-    add(turret,{g:'box',s:[.4,.26,.36+.26*(f.shots-1)],p:[.2,.98,0],c:IRON});
-    for(let i=0;i<f.shots;i++)add(barrels,{g:'cyl',s:[.15,1.35,.15],p:[.9,.98,(i-(f.shots-1)/2)*.26],r:[0,0,HALF],c:'#3d4552'});}
-  if(f&&f.id==='plow'){add(root,{g:'box',s:[.2,.6,2.1],p:[1.05,.45,0],c:'#7a8290'});for(let i=-2;i<=2;i++)add(root,{g:'cone',s:[.16,.38,.16],p:[1.3,.45,i*.38],r:[0,0,-HALF],c:'#d9d2c0'});}
-  const sd=M.side;
-  if(sd)for(const sz of [-1,1]){
-    if(sd.id==='broadside'){for(let i=0;i<sd.shots;i++){const x=(i-(sd.shots-1)/2)*.42;add(root,{g:'box',s:[.3,.24,.16],p:[x,.72,sz*.68],c:IRON});add(root,{g:'cyl',s:[.13,.55,.13],p:[x,.72,sz*.95],r:[HALF,0,0],c:'#3d4552'});}}
-    else{add(root,{g:'cyl',s:[.32,.42,.32],p:[0,.72,sz*.8],r:[HALF,0,0],c:'#8a3a1e'});add(root,{g:'cyl',s:[.16,.12,.16],p:[0,.72,sz*1.05],r:[HALF,0,0],c:'#ffb02e',glow:1});}
+  const L=S.L||2.3,W=S.W||1,th=S.th||.5,hw=S.hw||1.7,hh=S.hh||.4,gl=S.gl||.4,C=S.c,IRON='#3d3530',GUN='#3d4552';
+  // running gear: tracks with road wheels, or side skirts over them
+  for(const z of [-1,1]){
+    add(root,{g:'box',s:[L,th,.42],p:[0,th/2,z*(W-.21)],c:'#2f2a24'});
+    if(th>.6)add(root,{g:'box',s:[L*.88,th*.42,.46],p:[0,th*.79,z*(W-.21)],c:C}); // tall tracks run under hull-coloured panniers
+    if(S.sk)add(root,{g:'box',s:[L*.92,th*.7,.07],p:[0,th*.6,z*(W+.02)],c:C});
+    const n=S.wh===undefined?5:S.wh,dia=Math.min((S.wr||.25)*2,th-.06),span=L-dia-.2;
+    if(!S.sk)for(let i=0;i<n;i++)add(root,{g:'cyl',s:[dia,.08,dia],p:[-span/2+i*span/Math.max(1,n-1),th/2,z*(W+.01)],r:[HALF,0,0],c:'#6b5a48'});
+    if(S.fu)add(root,{g:'cyl',s:[.26,.5,.26],p:[-L/2+.45,th+.16,z*(W-.15)],r:[0,0,HALF],c:IRON});
   }
-  const b=M.back;
-  if(b&&b.id==='mines'){add(root,{g:'box',s:[.34,.42,.78],p:[-1.08,.62,0],c:'#e8ad2c'});for(let i=0;i<3;i++)add(root,{g:'box',s:[.35,.43,.08],p:[-1.08,.62,-.25+i*.25],c:'#1d1a12'});}
-  if(b&&b.id==='layer'){add(root,{g:'box',s:[.4,.4,.8],p:[-1.08,.62,0],c:'#5d6b4a'});add(root,{g:'cyl8',s:[.36,.16,.36],p:[-1.08,.9,0],c:'#c9b48a'});add(root,{g:'box',s:[.36,.08,.08],p:[-1.32,.95,0],c:'#3d4552'});}
-  if(b&&b.id==='drone'){add(root,{g:'cyl',s:[.5,.1,.5],p:[-1.05,.95,0],c:'#3d4552'});add(root,{g:'sph',s:[.2,.2,.2],p:[-1.05,1.05,0],c:'#9fe0ff',glow:1});}
-  top.position.set(rk>=2?.3:.25,y+.01,0);root.add(top);
+  add(root,{g:'box',s:[L*.98,.06,W*2],p:[0,th+.03,0],c:IRON});
+  // upper hull, sloped front plate, engine deck
+  const xb=-L/2+.05,xf=L/2-gl,Y=th+.06+hh,hx=(xb+xf)/2;
+  const hull=add(root,{g:'box',s:[xf-xb,hh,hw],p:[hx,th+.06+hh/2,0],c:C});
+  const ny=th*.62,dy=Y-ny,ga=Math.atan2(dy,gl);
+  add(root,{g:'box',s:[Math.hypot(gl,dy),.16,hw],p:[xf+gl/2,(Y+ny)/2-.05,0],r:[0,0,-ga],c:C});
+  const ex=S.eng==='f'?xf-.32:xb+.3;
+  add(root,{g:'box',s:[.42,.03,hw*.5],p:[ex,Y+.02,0],c:'#1d1a12',op:.3});
+  if(S.ad)for(const z of [-1,1])add(root,{g:'box',s:[(xf-xb)*.7,hh*.75,.08],p:[hx,th+.06+hh/2,z*(hw/2+.04)],c:'#7a7660'});
+  const stacks=[];for(const z of [-.3,.3]){const sx=S.eng==='f'?xf-.1:xb+.08;add(root,{g:'cyl',s:[.13,.22,.13],p:[sx,Y+.08,z*hw],c:'#2a2624'});stacks.push({x:sx,y:Y+.2,z:z*hw});}
+  // turret
+  const tr=(S.tr||.48)*1.2,tH=(S.tH||.34)*1.15,f=M.front,gun=f&&f.id==='cannon';
+  turret.position.set(S.tx||0,0,0);root.add(turret);turret.add(barrels);
+  add(turret,{g:'cyl',s:[tr*1.9,.06,tr*1.9],p:[0,Y+.02,0],c:IRON});
+  let gy=Y+tH*.5,front=tr*.95;
+  if(S.t==='box')add(turret,{g:'box',s:[tr*2,tH,tr*1.85],p:[0,Y+tH/2,0],c:C});
+  else if(S.t==='hex')add(turret,{g:'cyl8',s:[tr*2,tH,tr*1.9],p:[0,Y+tH/2,0],c:C});
+  else if(S.t==='dome')add(turret,{g:'sph',s:[tr*2.1,tH*1.9,tr*2.05],p:[0,Y+.02,0],c:C});
+  else if(S.t==='osc'){add(turret,{g:'cyl',s:[tr*1.8,tH*.35,tr*1.8],p:[0,Y+tH*.17,0],c:C});
+    add(turret,{g:'box',s:[tr*2.4,tH*.62,tr*1.35],p:[tr*.1,Y+tH*.65,0],c:C});gy=Y+tH*.62;front=tr*1.2;}
+  else{add(turret,{g:'cyl8',s:[tr*1.85,tH*.6,tr*1.75],p:[0,Y+tH*.3,0],c:C});add(turret,{g:'sph',s:[tr*1.85,tH*.9,tr*1.75],p:[0,Y+tH*.6,0],c:C});}
+  if(S.bu)add(turret,{g:'box',s:[tr*.8,tH*.55,tr*1.3],p:[-tr*1.05,Y+tH*.4,0],c:C});
+  if(S.cu)add(turret,{g:'cyl',s:[.22*S.cu,.13,.22*S.cu],p:[-tr*.3,Y+tH+.04,tr*.35],c:IRON});
+  if(S.ad)for(const z of [-1,1])add(turret,{g:'box',s:[tr*1.2,tH*.6,.07],p:[0,Y+tH*.45,z*tr*.97],c:'#7a7660'});
+  if(S.mi)for(const z of [-1,1])for(let k=0;k<2;k++){add(turret,{g:'cyl',s:[.08,.5,.08],p:[tr*.1,Y+tH*.75+k*.12,z*(tr*.75+.08)],r:[0,0,HALF],c:'#e8e2d0'});
+    add(turret,{g:'cone',s:[.09,.12,.09],p:[tr*.1+.31,Y+tH*.75+k*.12,z*(tr*.75+.08)],r:[0,0,-HALF],c:'#b8332a'});}
+  const n=gun?f.shots:1,gl_=gun?(S.gun||1.3):.35,gt=S.gt||.15,gz=Math.max(.2,gt*1.6);
+  add(turret,{g:'box',s:[.16,tH*.6,gt*2+gz*(n-1)],p:[front,gy,0],c:IRON});
+  for(let i=0;i<n;i++){const z=(i-(n-1)/2)*gz;add(barrels,{g:'cyl',s:[gt,gl_,gt],p:[front+gl_/2,gy,z],r:[0,0,HALF],c:GUN});
+    if(gun&&S.mb)add(barrels,{g:'cyl',s:[gt*1.7,.16,gt*1.7],p:[front+gl_-.06,gy,z],r:[0,0,HALF],c:GUN});}
+  if(f&&f.id==='plow'){add(root,{g:'box',s:[.2,.6,W*2+.1],p:[L/2-.05,.45,0],c:'#7a8290'});for(let i=-2;i<=2;i++)add(root,{g:'cone',s:[.16,.38,.16],p:[L/2+.2,.45,i*.38*W],r:[0,0,-HALF],c:'#d9d2c0'});}
+  const sd=M.side,my=th+.06+hh*.5;
+  if(sd)for(const sz of [-1,1]){
+    if(sd.id==='broadside'){for(let i=0;i<sd.shots;i++){const x=(i-(sd.shots-1)/2)*.42;add(root,{g:'box',s:[.3,.24,.16],p:[x,my,sz*(hw/2+.05)],c:IRON});add(root,{g:'cyl',s:[.13,.55,.13],p:[x,my,sz*(hw/2+.3)],r:[HALF,0,0],c:GUN});}}
+    else{add(root,{g:'cyl',s:[.32,.42,.32],p:[0,my,sz*(hw/2+.12)],r:[HALF,0,0],c:'#8a3a1e'});add(root,{g:'cyl',s:[.16,.12,.16],p:[0,my,sz*(hw/2+.37)],r:[HALF,0,0],c:'#ffb02e',glow:1});}
+  }
+  const b=M.back,bx=-L/2-.04;
+  if(b&&b.id==='mines'){add(root,{g:'box',s:[.34,.42,.78],p:[bx,my,0],c:'#e8ad2c'});for(let i=0;i<3;i++)add(root,{g:'box',s:[.35,.43,.08],p:[bx,my,-.25+i*.25],c:'#1d1a12'});}
+  if(b&&b.id==='layer'){add(root,{g:'box',s:[.4,.4,.8],p:[bx,my,0],c:'#5d6b4a'});add(root,{g:'cyl8',s:[.36,.16,.36],p:[bx,my+.28,0],c:'#c9b48a'});add(root,{g:'box',s:[.36,.08,.08],p:[bx-.24,my+.33,0],c:GUN});}
+  if(b&&b.id==='drone'){add(root,{g:'cyl',s:[.5,.1,.5],p:[bx+.03,Y+.06,0],c:GUN});add(root,{g:'sph',s:[.2,.2,.2],p:[bx+.03,Y+.16,0],c:'#9fe0ff',glow:1});}
+  // the top module sits on the deck behind the turret (in front of it when the turret is at the back)
+  top.position.set(S.eng==='f'?xf-.25:xb+.42,Y+.01,0);root.add(top);
   const t=M.top;
-  if(t&&t.id==='turret'){add(top,{g:'cyl',s:[.7,.28,.7],p:[0,.14,0],c:'#7d6a4c'});for(let i=0;i<t.shots;i++)add(top,{g:'cyl',s:[.12,.9,.12],p:[.48,.17,(i-(t.shots-1)/2)*.18],r:[0,0,HALF],c:'#3d4552'});}
+  if(t&&t.id==='turret'){add(top,{g:'cyl',s:[.7,.28,.7],p:[0,.14,0],c:'#7d6a4c'});for(let i=0;i<t.shots;i++)add(top,{g:'cyl',s:[.12,.9,.12],p:[.48,.17,(i-(t.shots-1)/2)*.18],r:[0,0,HALF],c:GUN});}
   else if(t&&t.id==='tesla'){add(top,{g:'cyl',s:[.66,.28,.66],p:[0,.14,0],c:'#2a3240'});add(top,{g:'torusF',s:[.6,.6,.6],p:[0,.4,0],c:'#8fd8ff',glow:1});add(top,{g:'sph',s:[.26,.26,.26],p:[0,.48,0],c:'#d6f3ff',glow:1});}
-  const flame=add(root,{g:'cone',s:[.5,.8,.5],p:[-1.45,.62,0],r:[0,0,HALF],c:'#ff9b2e',glow:1});flame.visible=false;
-  R3.scene.add(root);
-  R3.player={root,top,barrels,turret:f&&f.id==='cannon'?turret:null,hull,flame,stacks};
+  const flame=add(root,{g:'cone',s:[.5,.8,.5],p:[-L/2-.35,my,0],r:[0,0,HALF],c:'#ff9b2e',glow:1});flame.visible=false;
+  return {root,top,barrels,turret:gun?turret:null,hull,flame,stacks};
+}
+function buildPlayer3D(p){
+  if(R3.player){R3.scene.remove(R3.player.root);R3.player.root.traverse(o=>{if(o.material)o.material.dispose();});}
+  const S=TANKS[tankId(p)];R3.hullCol=S.c;
+  R3.player=tankMesh3D(S,p.modules);R3.scene.add(R3.player.root);
 }
 function buildBoss3D(e){
   const T=R3.T;
@@ -2265,7 +2317,7 @@ function render3D(){
   const vr=Math.hypot(vs.w/2,vs.h/2/Math.sin(PITCH))+160;
   const near=o=>Math.abs(o.x-tx)<vr&&Math.abs(o.y-tz)<vr;
   // player
-  const key=Object.values(p.modules).map(m=>m?m.id+m.shots:'-').join()+p.rank;
+  const key=Object.values(p.modules).map(m=>m?m.id+m.shots:'-').join()+tankId(p);
   if(key!==R3.key){R3.key=key;buildPlayer3D(p);}
   const P=R3.player,ch=p.chomp||0;
   P.root.position.set(p.x,0,p.y);P.root.rotation.y=-p.a;P.root.scale.set(p.r*(1+ch*.1),p.r*(1-ch*.08),p.r*(1+ch*.1));
@@ -2486,7 +2538,7 @@ function frame(now){
 }
 showTitle();
 requestAnimationFrame(frame);
-if(window.__SJ_TEST)window.__SJ_TEST({get G(){return G;},get mode(){return mode;},update,render,startRun,joy,openLevel,setMode:m=>{mode=m;},pick:i=>{if(onPick)onPick(lastCards[i%lastCards.length]);},get SAVE(){return SAVE;},CREW,CHASSIS,WORKSHOP,ARTIFACTS,openChest,useAbility,afterPick,MASTERY,addEnt,mkMod,upgradePool,AB,hurt,setSave:o=>{store.set(o);SAVE=loadSave();recoverRun();},setDate:d=>{QDATE=d;},ensureDaily,checkQuests,runStats,snapshotRun,QUESTS:{DAILY,MILESTONES},openGarage,renderGarage,endRun,audioInit,get R3(){return R3;}});
+if(window.__SJ_TEST)window.__SJ_TEST({get G(){return G;},get mode(){return mode;},update,render,startRun,joy,openLevel,setMode:m=>{mode=m;},pick:i=>{if(onPick)onPick(lastCards[i%lastCards.length]);},get SAVE(){return SAVE;},CREW,CHASSIS,WORKSHOP,ARTIFACTS,openChest,useAbility,afterPick,MASTERY,addEnt,mkMod,upgradePool,AB,hurt,setSave:o=>{store.set(o);SAVE=loadSave();recoverRun();},setDate:d=>{QDATE=d;},ensureDaily,checkQuests,runStats,snapshotRun,QUESTS:{DAILY,MILESTONES},openGarage,renderGarage,endRun,audioInit,get R3(){return R3;},TANKS,LINES,tankId,tankMesh3D,openBossReward});
 })();
 </script>
 </body>

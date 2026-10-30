@@ -154,6 +154,20 @@ run('iron','lou',true);run('ash','ida',true);run('ash','sid',false);run('iron','
  const me=run('standard','mechanic');const G=api.G;G.spawnT=G.helperT=1e9;G.ents=G.ents.filter(e=>e.d.neutral);me.hp=20;me.hitT=-10;api.update(1/60);for(let i=0;i<60;i++)api.update(1/60);
  assert.ok(me.hp>20,'mechanic repairs when not hit');api.endRun('quit');
  Object.assign(S,saved);console.log('crew + chassis ok');}
+// --- tank lines: each boss pick moves the tank up its chassis's speed or armor line, and every model builds ---
+{const S=api.SAVE,saved={chassis:S.chassis.slice(),selChassis:S.selChassis,selMap:S.selMap};S.chassis=['standard','scout','bulwark'];S.selMap='dust';
+ for(const ch of S.chassis){S.selChassis=ch;api.startRun();const G=api.G,P=G.p,L=api.LINES[ch];
+   assert.ok(api.tankId(P)===L.base,ch+' starts as '+L.base);api.render();
+   const boss=(card,stage)=>{G.stage=stage;api.openBossReward();assert.ok(api.mode==='boss','boss reward open');api.pick(card);};
+   boss(0,1);assert.ok(P.tier===1&&P.tline==='a'&&api.tankId(P)===L.a[0],ch+' armor tier 1: '+api.tankId(P));api.render();
+   boss(1,2);assert.ok(P.tier===2&&P.tline==='s'&&api.tankId(P)===L.s[1],ch+' speed tier 2: '+api.tankId(P));api.render();
+   boss(0,3);assert.ok(api.tankId(P)===L.a[2],ch+' armor tier 3: '+api.tankId(P));api.render();api.endRun('quit');}
+ const all=[...new Set(Object.values(api.LINES).flatMap(L=>[L.base,...L.s,...L.a]))];
+ assert.ok(all.length===21&&all.every(id=>api.TANKS[id]),'21 tanks, all defined');
+ const full={front:Object.assign(api.mkMod('cannon'),{shots:3}),side:api.mkMod('broadside'),back:api.mkMod('mines'),top:api.mkMod('turret')};
+ const bare={front:api.mkMod('plow'),side:api.mkMod('flamer'),back:api.mkMod('drone'),top:api.mkMod('tesla')};
+ for(const id of all)for(const M of [full,bare]){const m=api.tankMesh3D(api.TANKS[id],M);assert.ok(m.root.children.length>10&&m.hull&&m.stacks.length,id+' builds');}
+ Object.assign(S,saved);console.log('tank lines ok:',all.length,'tanks');}
 // --- ranged and static enemies can't pile up (per-type caps) ---
 {api.SAVE.selMap='dust';api.startRun();const G=api.G,P=G.p;G.stage=2;let maxT=0,maxW=0;
  for(let i=0;i<60*120;i++){if(api.mode==='play'){api.joy.dx=0;api.joy.dy=0;api.update(1/60);P.hp=P.maxHp;if(G.boss)G.boss=null,G.bossSpawned=true;
