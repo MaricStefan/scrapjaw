@@ -42,6 +42,16 @@ async def main():
               for(let i=0;i<60*{secs};i++){{if(a.mode!=='play'){{a.pick(0);a.setMode('play');}}a.joy.dx=Math.cos(i/50);a.joy.dy=Math.sin(i/40);a.update(1/60);G.p.hp=G.p.maxHp;}}
               if(G.boss){{G.cam.x=(G.boss.x+G.p.x)/2;G.cam.y=(G.boss.y+G.p.y)/2;}}}}""")
             await pg.wait_for_timeout(500);await pg.screenshot(path=str(ROOT/f'shots/iron_{name}.png'))
+        # tank lines: the boss reward names the next tank, the new model in play, then all 21 models (rows: scout, standard, bulwark; base, speed 1-3, armor 1-3)
+        await pg.evaluate("()=>{const a=__api;a.SAVE.selMap='dust';a.SAVE.selChassis='standard';a.startRun();__ff(3);a.setMode('play');a.G.stage=1;a.openBossReward();}")
+        await pg.wait_for_timeout(500);await pg.screenshot(path=str(ROOT/'shots/boss_reward.png'))
+        await pg.evaluate("()=>{__api.pick(1);__ff(2);__api.setMode('play');}");await pg.wait_for_timeout(400);await pg.screenshot(path=str(ROOT/'shots/tank_tier1.png'))
+        await pg.evaluate("""()=>{const api=__api;api.startRun();const G=api.G,P=G.p,R3=api.R3;G.ents=[];G.spawnT=1e9;api.render();R3.player.root.visible=false;
+          const M={front:api.mkMod('cannon'),side:null,back:null,top:null};
+          ['scout','standard','bulwark'].forEach((ch,r)=>{const L=api.LINES[ch];[L.base,...L.s,...L.a].forEach((id,c)=>{
+            const m=api.tankMesh3D(api.TANKS[id],M);m.root.position.set(P.x+(c-3)*95,0,P.y+(r-1)*120);m.root.rotation.y=-0.5;m.root.scale.set(30,30,30);R3.scene.add(m.root);});});
+          G.cam.x=P.x;G.cam.y=P.y;R3.d=330;api.render();R3.d=330;api.render();document.querySelectorAll('#hud,#banner').forEach(e=>e.style.display='none');}""")
+        await pg.wait_for_timeout(300);await pg.screenshot(path=str(ROOT/'shots/tanks.png'))
         print('page errors:',errs or 'none')
         await b.close()
 asyncio.run(main())
