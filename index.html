@@ -388,6 +388,11 @@ const MODS={
   layer:    {slot:'back', name:'Turret Layer', desc:'Plants sentry guns in your tracks. Each one fires at nearby enemies for a while.', dmg:9,cd:5,range:300},
   turret:   {slot:'top',  name:'Auto Turret',  desc:'Spins 360° and fires at the nearest enemy.', dmg:12,cd:0.55,range:390},
   tesla:    {slot:'top',  name:'Tesla Coil',   desc:'Lightning chains between enemies and slows them.', dmg:17,cd:1.25,range:300},
+  autocannon:{slot:'front',name:'Twin Autocannon',desc:'Twin barrels on the turret spray small shells at the nearest enemy.', dmg:7,cd:0.17,range:340},
+  rockets:  {slot:'side', name:'Rocket Pods',  desc:'Pods on both flanks fire rockets that fly through enemies.', dmg:16,cd:1.4,range:430},
+  napalm:   {slot:'back', name:'Napalm Sprayer',desc:'Leaves a burning trail behind you while you drive.', dmg:10,cd:0.22,range:0},
+  booster:  {slot:'back', name:'Rocket Booster',desc:'Boost recharges 30% faster, and its rocket flames scorch whatever is behind you.', dmg:14,cd:0.1,range:110},
+  howitzer: {slot:'top',  name:'Howitzer',     desc:'Lobs heavy shells onto the thickest group of enemies.', dmg:40,cd:3.2,range:520,radius:80},
 };
 // module abilities: tap the module's slot (keys 1-4 on desktop). cd = seconds, pw = what a power card raises, v = value at power level p
 const AB={
@@ -400,6 +405,11 @@ const AB={
   turret:   {name:'Lock-on Burst',cd:8, desc:'A rapid burst at the toughest enemy nearby, bosses first.',pw:'shots per burst',v:(m,p)=>8+3*p},
   tesla:    {name:'Storm',        cd:12,desc:'Lightning hits many enemies at once and slows them.',pw:'targets',v:(m,p)=>10+3*p},
   layer:    {name:'Fortify',      cd:14,desc:'Refreshes every sentry and doubles its fire rate.',pw:'fortify time',v:(m,p)=>4+p,sec:1},
+  autocannon:{name:'Hailstorm',   cd:10,desc:'Both barrels fire non-stop for a few seconds.',pw:'hailstorm time',v:(m,p)=>3+0.5*p,sec:1},
+  rockets:  {name:'Salvo',        cd:10,desc:'A wide fan of rockets from both flanks.',pw:'rockets',v:(m,p)=>12+3*p},
+  napalm:   {name:'Firestorm',    cd:12,desc:'Floods a wide strip behind you with fire.',pw:'burn time',v:(m,p)=>4+p,sec:1},
+  booster:  {name:'Afterburner',  cd:9, desc:'A very fast dash that smashes through enemies. You cannot be hurt while it lasts.',pw:'dash time',v:(m,p)=>0.8+0.2*p,sec:1},
+  howitzer: {name:'Barrage',      cd:12,desc:'Shells rain on a wide area behind you.',pw:'shells',v:(m,p)=>5+p},
 };
 // mastery: at MASTERY_LVL a module offers a final choice between a passive (p) and an ability (a) capstone
 const MASTERY_LVL=8;
@@ -413,6 +423,11 @@ const MASTERY={
   turret:   {p:['Twin Mount','The turret fires 50% faster.'],a:['Railgun Burst','Lock-on Burst shots pierce everything and hit twice as hard.']},
   tesla:    {p:['Arc Field','Lightning chains to three more enemies and slows longer.'],a:['Supercell','Storm strikes a second time.']},
   layer:    {p:['Heavy Sentries','Sentries last and hit 50% more.'],a:['Airdrop','Fortify also drops two new sentries beside you.']},
+  autocannon:{p:['Belt Feed','Fires 40% faster.'],a:['Tracer Storm','Hailstorm shells pierce two enemies and hit 50% harder.']},
+  rockets:  {p:['Extra Pods','One more rocket from each flank.'],a:['Ripple Fire','Salvo fires a second time.']},
+  napalm:   {p:['Sticky Gel','Fire lasts twice as long and burns 50% hotter.'],a:['Wall of Fire','Firestorm also rings the whole tank.']},
+  booster:  {p:['Afterglow','Boost recharges another 25% faster.'],a:['Shock Exit','Afterburner ends with a blast around you.']},
+  howitzer: {p:['Heavy Shells','Bigger blasts that hit 40% harder.'],a:['Creeping Barrage','Barrage fires twice as many shells.']},
 };
 const SLOT_NAME={front:'Front',side:'Sides',back:'Rear',top:'Top'};
 const SLOT_KEYS=['front','side','back','top'];
@@ -599,12 +614,16 @@ const WORKSHOP=[
     {id:'hardened',tier:1,name:'Hardened Shells',desc:'+8% weapon damage.',cost:200},
     {id:'tesla',tier:2,mod:'tesla',cost:600},
     {id:'loaders',tier:2,name:'Quick Loaders',desc:'Weapons reload 8% faster.',cost:350},
-    {id:'twinmounts',tier:3,name:'Twin Mounts',desc:'Start every run with Broadside fitted.',cost:700}]},
+    {id:'twinmounts',tier:3,name:'Twin Mounts',desc:'Start every run with Broadside fitted.',cost:700},
+    {id:'autocannon',tier:2,mod:'autocannon',cost:500},
+    {id:'rockets',tier:3,mod:'rockets',cost:900},
+    {id:'napalm',tier:3,mod:'napalm',quest:1}]},
   {id:'ram',name:'Ramming',items:[
     {id:'plow',tier:1,mod:'plow',cost:250},
     {id:'prow',tier:1,name:'Reinforced Prow',desc:'+20% ramming damage.',cost:200},
     {id:'tracks',tier:2,name:'Steel Tracks',desc:'Boost recharges 10% faster.',cost:300},
-    {id:'steamroller',tier:3,name:'Steamroller',desc:'Boost rams deal double damage and stun.',cost:700}]},
+    {id:'steamroller',tier:3,name:'Steamroller',desc:'Boost rams deal double damage and stun.',cost:700},
+    {id:'booster',tier:1,mod:'booster',cost:600}]},
   {id:'armor',name:'Armor',items:[
     {id:'riveted',tier:1,name:'Riveted Hull',desc:'+15 max HP.',cost:200},
     {id:'spaced',tier:2,name:'Spaced Armor',desc:'6% less damage taken.',cost:400},
@@ -615,7 +634,8 @@ const WORKSHOP=[
     {id:'magnet',tier:1,name:'Long Magnet',desc:'+25% pickup range.',cost:200},
     {id:'spare',tier:2,name:'Spare Parts',desc:'+1 reroll every run.',cost:350},
     {id:'layer',tier:3,mod:'layer',quest:1},
-    {id:'salvage',tier:3,name:'Salvage Rig',desc:'+10% silver from every run.',cost:800}]},
+    {id:'salvage',tier:3,name:'Salvage Rig',desc:'+10% silver from every run.',cost:800},
+    {id:'howitzer',tier:2,mod:'howitzer',cost:1000}]},
 ];
 const TIER_NEED=[0,0,1,3]; // items owned in the category to open each tier
 const wsOwned=it=>it.mod?SAVE.mods.includes(it.mod):SAVE.perks.includes(it.id);
@@ -631,7 +651,7 @@ function applyPerks(P){ // permanent workshop perks, applied at the start of eve
   if(hasPerk('spare'))P.rerolls+=1;
   if(hasPerk('salvage'))P.silverMult*=1.1;
 }
-const QUEST_MODS={layer:'m_mines'}; // modules that only a milestone unlocks
+const QUEST_MODS={layer:'m_mines',napalm:'m_flamer'}; // modules that only a milestone unlocks
 // quests: m = run metric (see runStats), run:1 = best single run counts, otherwise runs add up
 const DAILY=[
   {id:'d_soldiers',m:'soldiers',n:100,run:1,t:'Eat 100 soldiers in one run',silver:100},
@@ -657,6 +677,7 @@ const MILESTONES=[
   {id:'m_kills',   m:'kills',     n:2500,     t:'Destroy 2,500 enemies',silver:300},
   {id:'m_ash',     m:'clear:ash', n:1,run:1,  t:'Clear Ashlands',silver:500},
   {id:'m_tanks',   m:'tanks',     n:100,      t:'Destroy 100 tanks in total',crew:'radio'},
+  {id:'m_flamer',  m:'flamer',    n:10,run:1, t:'Get Side Flamers to level 10 in one run',mod:'napalm'},
 ];
 DAILY.forEach(q=>q.daily=1);
 function loadSave(){const s=store.get();s.silver=s.silver||0;s.mods=s.mods||[];s.caps=s.caps||['sarge'];s.maps=s.maps||['dust'];
@@ -691,7 +712,7 @@ function runStats(){ // this run's numbers, zeros outside a run
   if(!G||!G.rs||!G.rs.on)return ZR;
   const e=G.rs.eat,k=G.rs.kill,p=G.p,b=p.modules.back,c=(o,...ts)=>ts.reduce((s,t)=>s+(o[t]||0),0);
   return {soldiers:c(e,'grunt','biker'),scrap:c(e,'scrap'),huts:c(e,'hut'),trucks:c(e,'truck'),kills:p.kills,tanks:c(k,'tank','heavy')+c(e,'tank'),
-    carts:c(k,'magnetcart','repaircart'),bosses:G.bossKills,gold:Math.floor(p.totalXp),time:Math.floor(G.t),level:p.level,mines:b&&b.id==='mines'?b.lvl:0};
+    carts:c(k,'magnetcart','repaircart'),bosses:G.bossKills,gold:Math.floor(p.totalXp),time:Math.floor(G.t),level:p.level,mines:b&&b.id==='mines'?b.lvl:0,flamer:p.modules.side&&p.modules.side.id==='flamer'?p.modules.side.lvl:0};
 }
 function qRunVal(q,R){return q.m.startsWith('clear:')?(SAVE.cleared[q.m.slice(6)]?1:0):(R[q.m]||0);}
 function qVal(q,R){const st=qStore(q).prog[q.id]||0,v=qRunVal(q,R||runStats());return q.run?Math.max(st,v):st+v;}
@@ -736,7 +757,7 @@ function newGame(mapId,capId){
   const P=newPlayer();cap.ap(P);applyPerks(P);
   const ch=CHASSIS.find(c=>c.id===SAVE.selChassis)||CHASSIS[0];P.chassis=ch.id;ch.ap(P);G={crew:SAVE.selCrew,capId:cap.id}; // provisional, so mkMod sees the crew and captain
   P.modules.front=mkMod('cannon',P.wdm);if(hasPerk('twinmounts'))P.modules.side=mkMod('broadside',P.wdm);
-  G={t:0,stage:1,stageT:0,boss:null,bossSpawned:false,bossT:0,overtime:false,cleared:false,otT:0,otNext:OT_PAY,otSilver:0,unlockMsg:'',droneOD:0,burns:[],spawnT:1.5,crateT:22,mortarT:2,neutT:0,
+  G={t:0,stage:1,stageT:0,boss:null,bossSpawned:false,bossT:0,overtime:false,cleared:false,otT:0,otNext:OT_PAY,otSilver:0,unlockMsg:'',droneOD:0,burns:[],shells:[],spawnT:1.5,crateT:22,mortarT:2,neutT:0,
     ents:[],pb:[],eb:[],mines:[],pick:[],parts:[],texts:[],strikes:[],bolts:[],drones:[],crates:[],tracks:[],drops:[],fires:[],helperT:38,helperN:0,rings:[],decals:[],flash:0,redflash:0,hitstop:0,combo:0,comboT:0,
     p:P,mapDef,cap,capId:cap.id,crew:SAVE.selCrew,bossKills:0,lvQ:[],shake:0,cam:{x:WORLD/2,y:WORLD/2},
     sentries:[],hazards:[],mastQ:[],arts:[],chests:[],chestT:rnd(20,40),clouds:[],waves:[],rs:{on:false,eat:{},kill:{}},qDone:[],qT:0.5};
@@ -1003,7 +1024,7 @@ function crowdAt(range){ // the enemy with the most others around it (the boss w
   return best;
 }
 function updateCrew(dt){
-  const p=G.p,c=G.crew;if(!G.shells)G.shells=[];
+  const p=G.p,c=G.crew;
   for(const sh of G.shells){sh.t-=dt;if(sh.t<=0){explode(sh.x,sh.y,sh.r,sh.dmg,false,true);if(sh.burn){G.burns.push({x:sh.x,y:sh.y,r:46,life:2.5,max:2.5,dps:sh.burn});if(G.burns.length>44)G.burns.shift();}}}
   G.shells=G.shells.filter(sh=>sh.t>0);
   const C=CREW.find(x=>x.id===c);if(!C||!C.fight)return;
@@ -1044,6 +1065,13 @@ function updateModules(dt){
         if(f.mastery==='p'&&!f.echoing)f.echo=0.14;}
       if(f.echo>0){f.echo-=dt;if(f.echo<=0){f.echoing=true;f.t=0;f.echo=0;}}else if(f.echoing&&f.t>0)f.echoing=false;
     }
+    if(f.id==='autocannon'){ // twin barrels on the main turret: quick alternating shots, Hailstorm fires non-stop
+      const tg=nearest(p.x,p.y,f.range);const want=tg?angDiff(p.a,Math.atan2(tg.y-p.y,tg.x-p.x)):0;
+      p.gunO+=clamp(angDiff(p.gunO,want),-GUN_TURN*1.5*dt,GUN_TURN*1.5*dt);if(f.hail>0)f.hail-=dt;
+      if(f.t<=0&&tg&&Math.abs(angDiff(p.gunO,want))<0.15){const H=f.hail>0;f.t=f.cd*(H?0.3:1);f.alt=-(f.alt||1);
+        const ga=p.a+p.gunO+rnd(-0.05,0.05),cg=Math.cos(ga),sg=Math.sin(ga),px=p.x+Math.cos(p.a)*p.r*0.15-sg*f.alt*p.r*0.1,py=p.y+Math.sin(p.a)*p.r*0.15+cg*f.alt*p.r*0.1;
+        const TS=H&&f.mastery==='a';shoot(px+cg*p.r*1.05,py+sg*p.r*1.05,ga,780,f.dmg*(TS?1.5:1),f.range,{r:3.5,pierce:TS?2:0,col:TS?'#ff9b5a':'#ffe08a'});p.recoil=0.4;sfx('pew');}
+    }
     if(f.id==='plow'&&f.t<=0){f.t=f.cd;
       for(const e of G.ents){if(e.dead||e.d.neutral)continue;const dx=e.x-p.x,dy=e.y-p.y,dd=Math.hypot(dx,dy);
         if(dd<p.r*1.4+e.r+14&&Math.abs(angDiff(p.a,Math.atan2(dy,dx)))<0.9){hurt(e,f.dmg*(0.6+Math.abs(p.v)/250));parts(e.x,e.y,3,'#d9d2c0',140,3,0.25);}}
@@ -1062,6 +1090,11 @@ function updateModules(dt){
             const ox=p.x+Math.cos(p.a)*off+Math.cos(dir)*p.r*1.1,oy=p.y+Math.sin(p.a)*off+Math.sin(dir)*p.r*1.1;
             const aim=Math.atan2(tg.y-oy,tg.x-ox);const a=dir+clamp(angDiff(dir,aim),-0.35,0.35);
             shoot(ox,oy,a,560,s.dmg,s.range,{r:5,pierce:s.mastery==='p'?2:0});}sfx('pew');}
+        }else if(s.id==='rockets'){
+          const tg=nearest(p.x,p.y,s.range,cone(dir,0.7));
+          if(tg){fired=true;const n=s.shots+1;for(let i=0;i<n;i++){const off=(i-(n-1)/2)*p.r*0.3,ox=p.x+Math.cos(p.a)*off+Math.cos(dir)*p.r*1.1,oy=p.y+Math.sin(p.a)*off+Math.sin(dir)*p.r*1.1;
+            const a=dir+clamp(angDiff(dir,Math.atan2(tg.y-oy,tg.x-ox)),-0.4,0.4)+rnd(-0.05,0.05);shoot(ox,oy,a,520,s.dmg,s.range,{r:6,pierce:2,col:'#ff8a2a'});}
+            smoke(p.x+Math.cos(dir)*p.r,p.y+Math.sin(dir)*p.r,1,14);sfx('boom',0.4);}
         }else{
           let any=false;
           for(const e of G.ents){if(e.dead||e.d.neutral)continue;const dx=e.x-p.x,dy=e.y-p.y,dd=Math.hypot(dx,dy);
@@ -1082,6 +1115,16 @@ function updateModules(dt){
       for(let i=0;i<b.extra;i++){
         G.mines.push({x:p.x-Math.cos(p.a)*p.r*1.3+rnd(-6,6)*i,y:p.y-Math.sin(p.a)*p.r*1.3+rnd(-6,6)*i,arm:0.35,dmg:b.dmg,rad:b.radius,life:22,cluster:b.mastery==='p'});}
       sfx('mine');if(G.mines.length>30)G.mines.shift();
+    }
+    if(b.id==='napalm'&&b.t<=0&&Math.abs(p.v)>40){b.t=b.cd;const SG=b.mastery==='p';
+      G.burns.push({x:p.x-Math.cos(p.a)*p.r*1.3,y:p.y-Math.sin(p.a)*p.r*1.3,r:24,life:SG?5:2.5,max:SG?5:2.5,dps:b.dmg*(SG?1.5:1)});if(G.burns.length>44)G.burns.shift();}
+    if(b.id==='booster'){ // rocket flames behind while boosting; Afterburner smashes through what it touches
+      if(p.nitro>0&&b.t<=0){b.t=b.cd;const back=p.a+Math.PI;
+        for(const e of G.ents){if(e.dead||e.d.neutral)continue;const dx=e.x-p.x,dy=e.y-p.y;if(Math.hypot(dx,dy)<b.range+p.r+e.r&&Math.abs(angDiff(back,Math.atan2(dy,dx)))<0.45){hurt(e,b.dmg);e.burn=1;}}
+        for(let k=0;k<3;k++){const a=back+rnd(-0.25,0.25),sp=rnd(280,420);G.parts.push({x:p.x+Math.cos(back)*p.r,y:p.y+Math.sin(back)*p.r,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp,life:0.25,max:0.25,col:Math.random()<.5?'#ff9b2e':'#9fd8ff',size:rnd(5,9)});}}
+      if(p.after>0){p.after-=dt;
+        for(const e of G.ents){if(e.dead||e.d.neutral||b.hits.includes(e))continue;if(Math.hypot(e.x-p.x,e.y-p.y)<p.r+e.r+12){b.hits.push(e);hurt(e,b.dmg*6);if(!e.d.boss&&!e.d.stat)e.stun=1;}}
+        if(p.after<=0&&b.mastery==='a')explode(p.x,p.y,150,b.dmg*5,false,true);}
     }
     if(b.id==='drone'){
       while(G.drones.length<b.extra)G.drones.push({a:G.drones.length*TAU/b.extra,t:rnd(0,b.cd),x:p.x,y:p.y});
@@ -1114,6 +1157,8 @@ function updateModules(dt){
     if(t.t<=0&&tg){t.t=t.cd;
       if(t.id==='turret'){
         for(let i=0;i<t.shots;i++){const a=p.turA+(i-(t.shots-1)/2)*0.12;shoot(p.x+Math.cos(a)*p.r*0.9,p.y+Math.sin(a)*p.r*0.9,a,600,t.dmg,t.range,{r:4});}sfx('pew');
+      }else if(t.id==='howitzer'){const e=crowdAt(t.range)||tg,HS=t.mastery==='p';p.turA=Math.atan2(e.y-p.y,e.x-p.x);
+        G.shells.push({x:e.x,y:e.y,t:0.8,r:t.radius*(HS?1.3:1),dmg:t.dmg*(HS?1.4:1)});smoke(p.x+Math.cos(p.turA)*p.r,p.y+Math.sin(p.turA)*p.r,2,18);sfx('cannon');
       }else{
         const pts=[{x:p.x,y:p.y}];const hit=[];let cur=tg;
         for(let i=0;i<t.extra+2&&cur;i++){hit.push(cur);pts.push({x:cur.x,y:cur.y});hurt(cur,t.dmg);cur.slow=t.mastery==='p'?2.6:1.6;
@@ -1134,13 +1179,29 @@ function useAbility(slot){
   if(!castAbility(slot)){addText(p.x,p.y-p.r-12,'No target','#c9c2b0');return false;}
   if(m.mastery==='a'&&m.id==='broadside')m.rep={n:2,t:0.25,gap:0.25};
   if(m.mastery==='a'&&m.id==='tesla')m.rep={n:1,t:0.6,gap:0.6};
+  if(m.mastery==='a'&&m.id==='rockets')m.rep={n:1,t:0.5,gap:0.5};
   A.t=A.cd;if(hasArt('echo')&&Math.random()<0.15){A.t=0;addText(p.x,p.y-p.r-12,'Echo!','#c49bff');}buzz(20);return true;
 }
 function castAbility(slot){
   const p=G.p,m=p.modules[slot];if(!m)return false;const A=m.ab,MA=m.mastery==='a';
   const v=AB[m.id].v(m,A.pow),ca=Math.cos(p.a),sa=Math.sin(p.a);let ok=true;
   const foes=()=>G.ents.filter(e=>!e.dead&&!e.d.neutral);
-  if(m.id==='plow'){
+  if(m.id==='autocannon'){m.hail=v;sfx('pew');
+  }else if(m.id==='rockets'){
+    for(const side of [-1,1]){const dir=p.a+side*HALF,n=Math.ceil(v/2);
+      for(let i=0;i<n;i++){const a=dir+(i/(n-1)-0.5)*1.2;shoot(p.x+Math.cos(dir)*p.r*1.1,p.y+Math.sin(dir)*p.r*1.1,a,500,m.dmg*1.3,m.range,{r:6,pierce:2,col:'#ff8a2a'});}}
+    smoke(p.x,p.y,3,30);sfx('boom',0.7);
+  }else if(m.id==='napalm'){
+    for(let j=-1;j<=1;j++)for(let k=1;k<=4;k++)G.burns.push({x:p.x-ca*(p.r+k*42)-sa*j*42,y:p.y-sa*(p.r+k*42)+ca*j*42,r:28,life:v,max:v,dps:m.dmg*2.5});
+    if(MA)for(let i=0;i<10;i++){const a=i*TAU/10;G.burns.push({x:p.x+Math.cos(a)*(p.r+42),y:p.y+Math.sin(a)*(p.r+42),r:26,life:v,max:v,dps:m.dmg*2.5});}
+    if(G.burns.length>44)G.burns.splice(0,G.burns.length-44);sfx('flame');
+  }else if(m.id==='booster'){
+    p.after=v;p.nitro=Math.max(p.nitro,v);p.nitroLen=v;p.iframes=Math.max(p.iframes,v);m.hits=[];G.shake+=4;sfx('nitro');
+  }else if(m.id==='howitzer'){
+    const n=MA?v*2:v,back=p.a+Math.PI;
+    for(let i=0;i<n;i++){const a=back+rnd(-0.9,0.9),d=rnd(110,330);G.shells.push({x:p.x+Math.cos(a)*d,y:p.y+Math.sin(a)*d,t:0.6+i*0.15,r:m.radius,dmg:m.dmg*1.5});}
+    sfx('cannon');
+  }else if(m.id==='plow'){
     const dir=aimDir(p.a),reach=MA?v*1.3:v,cd_=Math.cos(dir),sd_=Math.sin(dir);
     for(const e of foes()){const dx=e.x-p.x,dy=e.y-p.y,d=Math.hypot(dx,dy)||1;
       if(d<reach+e.r&&(MA||Math.abs(angDiff(dir,Math.atan2(dy,dx)))<1.1)){hurt(e,m.dmg*3);if(!e.d.stat&&!e.d.boss){e.x+=dx/d*120;e.y+=dy/d*120;e.stun=1.5;}}}
@@ -1334,6 +1395,11 @@ const ICONS={
   turret:'<circle cx="10" cy="14" r="6"/><path d="M14 11l7-5"/>',
   layer:'<path d="M5 21l7-6 7 6M12 15v-3"/><rect x="6" y="6" width="10" height="6" rx="1.5"/><path d="M16 9h6"/>',
   tesla:'<path d="M13 2 5 14h6l-1 8 8-12h-6z"/>',
+  autocannon:'<rect x="3" y="10" width="9" height="7" rx="2"/><path d="M12 11h9M12 15h9"/>',
+  rockets:'<rect x="3" y="7" width="11" height="10" rx="1.5"/><circle cx="6.5" cy="10.5" r="1.3"/><circle cx="10.5" cy="10.5" r="1.3"/><circle cx="6.5" cy="14" r="1.3"/><circle cx="10.5" cy="14" r="1.3"/><path d="M14 12h7"/>',
+  napalm:'<rect x="5" y="4" width="6" height="13" rx="3"/><path d="M11 13h5l3 3M12 20c1-2 3-2 4 0"/>',
+  booster:'<path d="M4 8h9l5 4-5 4H4z"/><path d="M4 10l-2 2 2 2"/><path d="M18 12h4"/>',
+  howitzer:'<rect x="4" y="14" width="12" height="6" rx="1.5"/><path d="M9 14l10-9M17 4l3 3"/>',
   hp:'<path d="M12 20s-7-4.5-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.5-7 10-7 10z"/>',
   speed:'<path d="M4 17a8 8 0 1 1 16 0"/><path d="M12 17l4-6"/>',
   magnet:'<path d="M6 4v8a6 6 0 0 0 12 0V4"/><path d="M6 8h3M15 8h3"/>',
@@ -1371,6 +1437,8 @@ function upgradePool(){
     if(m.id==='layer'&&m.extra<4)L.push({fix:1,t:nm,icon:ic,s:()=>[['sentries at once',m.extra+1,m.extra+2]],ap:()=>{m.extra++;m.lvl++;}});
     if(m.id==='drone'&&m.extra<4)L.push({fix:1,t:nm,icon:ic,s:()=>[['drones',m.extra,m.extra+1]],ap:()=>{m.extra++;m.lvl++;G.drones.length=0;}});
     if(m.id==='turret'&&m.shots<3)L.push({fix:1,t:nm,icon:ic,s:()=>[['barrels',m.shots,m.shots+1]],ap:()=>{m.shots++;m.lvl++;}});
+    if(m.id==='rockets'&&m.shots<4)L.push({fix:1,t:nm,icon:ic,s:()=>[['rockets per side',m.shots+1,m.shots+2]],ap:()=>{m.shots++;m.lvl++;}});
+    if(m.id==='howitzer')L.push({t:nm,icon:ic,s:k=>[['blast radius',r1(m.radius),r1(m.radius*(1+0.15*k))]],ap:k=>{m.radius*=1+0.15*k;m.lvl++;}});
     if(m.id==='tesla'&&m.extra<6)L.push({fix:1,t:nm,icon:ic,s:()=>[['targets hit',m.extra+2,m.extra+3]],ap:()=>{m.extra++;m.lvl++;}});
   }
   L.push({bulk:BULK.armorCard,t:'Thicker armor',icon:'hp',s:k=>[['max HP',r1(p.maxHp),r1(p.maxHp+20*k)]],ap:k=>{p.maxHp+=20*k;p.hp+=20*k;}});
@@ -1425,6 +1493,8 @@ function openMastery(){
 function applyMastery(m){ // one-off stat changes; the rest are checked where they happen
   const p=G.p;
   if(m.mastery==='a'&&m.id==='cannon'){m.extra+=2;m.dmg*=1.25;}
+  if(m.mastery==='p'&&m.id==='autocannon')m.cd/=1.4;
+  if(m.mastery==='p'&&m.id==='rockets')m.shots++;
   if(m.mastery==='p'){
     if(m.id==='plow'){m.dmg*=1.8;p.ramDmg*=1.5;}
     if(m.id==='flamer'){m.dmg*=1.6;m.range*=1.25;}
@@ -1617,7 +1687,7 @@ const endJoy=e=>{if(e.pointerId===joy.id)releaseJoy();};
 cvs.addEventListener('pointerup',endJoy);cvs.addEventListener('pointercancel',endJoy);
 addEventListener('keydown',e=>{keys[e.key.toLowerCase()]=true;if(e.key>='1'&&e.key<='4'&&G&&!e.repeat){const k=abSlots()[+e.key-1];if(k)useAbility(k);}if(e.key===' '){tryNitro();e.preventDefault();}if(e.key==='Escape'){mode==='play'?pauseGame():null;}});
 addEventListener('keyup',e=>{keys[e.key.toLowerCase()]=false;});
-function tryNitro(){const p=G&&G.p;if(!p||mode!=='play')return;if(p.nitroCd<=0){p.nitroLen=hasCap('rosa')?2.08:1.6;p.nitro=p.nitroLen;if(hasArt('shockboost'))explode(p.x,p.y,110,25*p.wdm,false,true);p.nitroCd=p.nitroMax;G.shake+=3;sfx('nitro');buzz(15);}}
+function tryNitro(){const p=G&&G.p;if(!p||mode!=='play')return;if(p.nitroCd<=0){p.nitroLen=hasCap('rosa')?2.08:1.6;p.nitro=p.nitroLen;if(hasArt('shockboost'))explode(p.x,p.y,110,25*p.wdm,false,true);const bo=p.modules.back&&p.modules.back.id==='booster'?p.modules.back:null;p.nitroCd=p.nitroMax*(bo?(bo.mastery==='p'?0.525:0.7):1);G.shake+=3;sfx('nitro');buzz(15);}}
 $('#nitro').addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();tryNitro();});
 $('#pauseBtn').addEventListener('click',pauseGame);
 $('#resumeBtn').addEventListener('click',()=>{$('#pause').classList.remove('show');resume();});
@@ -1641,7 +1711,7 @@ function update(dt){
   let ix=joy.dx,iy=joy.dy;
   if(keys.w||keys.arrowup)iy-=1;if(keys.s||keys.arrowdown)iy+=1;if(keys.a||keys.arrowleft)ix-=1;if(keys.d||keys.arrowright)ix+=1;
   const mag=Math.hypot(ix,iy);
-  const maxSp=p.baseSpeed*p.spdMult*(1-p.rank*0.03)*bulkSlow(p.bulk)*(p.nitro>0?(hasCap('rosa')?2.19:1.75):1)*(p.steamed?0.65:1);
+  const maxSp=p.baseSpeed*p.spdMult*(1-p.rank*0.03)*bulkSlow(p.bulk)*(p.nitro>0?(hasCap('rosa')?2.19:1.75):1)*(p.after>0?1.5:1)*(p.steamed?0.65:1);
   let target=0;
   if(mag>0.15){const ta=Math.atan2(iy,ix);const df=angDiff(p.a,ta);const tr=p.turn*p.turnMult*dt*(p.nitro>0?0.75:1);
     p.a+=clamp(df,-tr,tr);target=maxSp*Math.min(1,mag)*Math.max(0.3,Math.cos(df));}
@@ -1878,7 +1948,9 @@ function drawTank(p){
   if(b&&b.id==='mines'){ctx.fillStyle='#e8ad2c';ctx.fillRect(-s*1.28,-s*0.38,s*0.34,s*0.76);ctx.fillStyle='#1d1a12';for(let i=0;i<3;i++)ctx.fillRect(-s*1.28,-s*0.32+i*s*0.25,s*0.34,s*0.1);}
   if(b&&b.id==='layer'){ctx.fillStyle='#5d6b4a';rr(-s*1.3,-s*0.4,s*0.4,s*0.8,s*0.1);ctx.fill();ctx.fillStyle='#c9b48a';ctx.beginPath();ctx.arc(-s*1.1,0,s*0.16,0,TAU);ctx.fill();}
   if(b&&b.id==='drone'){ctx.fillStyle='#3d4552';rr(-s*1.3,-s*0.4,s*0.4,s*0.8,s*0.1);ctx.fill();ctx.fillStyle='#9fe0ff';ctx.beginPath();ctx.arc(-s*1.1,0,s*0.14,0,TAU);ctx.fill();}
-  if(f&&f.id==='cannon'){ctx.save();ctx.translate(s*0.15,0);ctx.rotate(p.gunO);ctx.fillStyle=TC;ctx.strokeStyle='#1d1a12';ctx.lineWidth=2;ctx.beginPath();ctx.arc(0,0,s*0.42,0,TAU);ctx.fill();ctx.stroke();
+  if(sd&&sd.id==='rockets'){ctx.fillStyle='#4f5a36';ctx.fillRect(-s*0.3,s*0.62,s*0.6,s*0.32);ctx.fillRect(-s*0.3,-s*0.94,s*0.6,s*0.32);}
+  if(b&&(b.id==='napalm'||b.id==='booster')){ctx.fillStyle=b.id==='napalm'?'#8a3a1e':'#55604a';ctx.fillRect(-s*1.3,-s*0.4,s*0.36,s*0.8);}
+  if(f&&(f.id==='cannon'||f.id==='autocannon')){ctx.save();ctx.translate(s*0.15,0);ctx.rotate(p.gunO);ctx.fillStyle=TC;ctx.strokeStyle='#1d1a12';ctx.lineWidth=2;ctx.beginPath();ctx.arc(0,0,s*0.42,0,TAU);ctx.fill();ctx.stroke();
     ctx.fillStyle='#3d4552';for(let i=0;i<f.shots;i++){const y=(i-(f.shots-1)/2)*s*0.24;rr(s*0.2-(p.recoil||0)*s*0.3,y-s*0.08,s*1.15,s*0.16,s*0.04);ctx.fill();}ctx.restore();}
   ctx.restore();
   // top module (world-aligned rotation)
@@ -2293,7 +2365,7 @@ function tankMesh3D(S,M,crew){
   if(S.ad)for(const z of [-1,1])add(root,{g:'box',s:[(xf-xb)*.7,hh*.75,.08],p:[hx,th+.06+hh/2,z*(hw/2+.04)],c:'#7a7660'});
   const stacks=[];for(const z of [-.3,.3]){const sx=S.eng==='f'?xf-.1:xb+.08;add(root,{g:'cyl',s:[.13,.22,.13],p:[sx,Y+.08,z*hw],c:'#2a2624'});stacks.push({x:sx,y:Y+.2,z:z*hw});}
   // turret
-  const tr=(S.tr||.48)*1.2,tH=(S.tH||.34)*1.15,f=M.front,gun=f&&f.id==='cannon';
+  const tr=(S.tr||.48)*1.2,tH=(S.tH||.34)*1.15,f=M.front,gun=f&&(f.id==='cannon'||f.id==='autocannon'),ac=f&&f.id==='autocannon';
   turret.position.set(S.tx||0,0,0);root.add(turret);turret.add(barrels);
   add(turret,{g:'cyl',s:[tr*1.9,.06,tr*1.9],p:[0,Y+.02,0],c:IRON});
   let gy=Y+tH*.5,front=tr*.95;
@@ -2308,7 +2380,7 @@ function tankMesh3D(S,M,crew){
   if(S.ad)for(const z of [-1,1])add(turret,{g:'box',s:[tr*1.2,tH*.6,.07],p:[0,Y+tH*.45,z*tr*.97],c:'#7a7660'});
   if(S.mi)for(const z of [-1,1])for(let k=0;k<2;k++){add(turret,{g:'cyl',s:[.08,.5,.08],p:[tr*.1,Y+tH*.75+k*.12,z*(tr*.75+.08)],r:[0,0,HALF],c:'#e8e2d0'});
     add(turret,{g:'cone',s:[.09,.12,.09],p:[tr*.1+.31,Y+tH*.75+k*.12,z*(tr*.75+.08)],r:[0,0,-HALF],c:'#b8332a'});}
-  const n=gun?f.shots:1,gl_=gun?(S.gun||1.3):.35,gt=S.gt||.15,gz=Math.max(.2,gt*1.6);
+  const n=ac?2:gun?f.shots:1,gl_=ac?(S.gun||1.3)*.8:gun?(S.gun||1.3):.35,gt=ac?.08:S.gt||.15,gz=ac?.16:Math.max(.2,gt*1.6);
   add(turret,{g:'box',s:[.16,tH*.6,gt*2+gz*(n-1)],p:[front,gy,0],c:IRON});
   for(let i=0;i<n;i++){const z=(i-(n-1)/2)*gz;add(barrels,{g:'cyl',s:[gt,gl_,gt],p:[front+gl_/2,gy,z],r:[0,0,HALF],c:GUN});
     if(gun&&S.mb)add(barrels,{g:'cyl',s:[gt*1.7,.16,gt*1.7],p:[front+gl_-.06,gy,z],r:[0,0,HALF],c:GUN});}
@@ -2318,6 +2390,8 @@ function tankMesh3D(S,M,crew){
     if(sd.id==='broadside'){for(let i=0;i<sd.shots;i++){const x=(i-(sd.shots-1)/2)*.42; // sponson casemate, ball mount, gun
       add(root,{g:'box',s:[.36,.3,.2],p:[x,my,sz*(hw/2+.08)],c:C});add(root,{g:'sph',s:[.2,.2,.2],p:[x,my,sz*(hw/2+.19)],c:IRON});
       add(root,{g:'cyl',s:[.1,.5,.1],p:[x,my,sz*(hw/2+.42)],r:[HALF,0,0],c:GUN});}}
+    else if(sd.id==='rockets'){add(root,{g:'box',s:[.56,.3,.24],p:[0,my+.04,sz*(hw/2+.12)],c:'#4f5a36'}); // rocket pod: a box of tubes facing outward
+      for(const ox of [-.15,.0,.15])for(const oy of [-.06,.08])add(root,{g:'cyl',s:[.09,.04,.09],p:[ox,my+.04+oy,sz*(hw/2+.25)],r:[HALF,0,0],c:'#1d1a12'});}
     else{add(root,{g:'cyl',s:[.24,.6,.24],p:[.1,th+.16,sz*(W-.13)],r:[0,0,HALF],c:'#8a3a1e'});add(root,{g:'cyl',s:[.25,.06,.25],p:[.1,th+.16,sz*(W-.13)],r:[0,0,HALF],c:IRON}); // fuel tank
       add(root,{g:'box',s:[.2,.18,.14],p:[.35,my,sz*(hw/2+.07)],c:IRON});add(root,{g:'cyl',s:[.08,.36,.08],p:[.35,my,sz*(hw/2+.3)],r:[HALF,0,0],c:GUN}); // projector
       add(root,{g:'sph',s:[.09,.09,.09],p:[.35,my,sz*(hw/2+.5)],c:'#ffb02e',glow:1});}
@@ -2326,6 +2400,10 @@ function tankMesh3D(S,M,crew){
   if(b&&b.id==='mines'){add(root,{g:'box',s:[.06,.46,.8],p:[bx+.14,my,0],c:IRON});
     for(const z of [-.2,.2]){for(let k=0;k<3;k++)add(root,{g:'cyl',s:[.32,.1,.32],p:[bx-.03,my-.15+k*.14,z],c:'#e8ad2c'});add(root,{g:'cyl',s:[.1,.04,.1],p:[bx-.03,my+.15,z],c:'#1d1a12'});}}
   if(b&&b.id==='layer'){add(root,{g:'box',s:[.4,.4,.8],p:[bx,my,0],c:'#5d6b4a'});add(root,{g:'cyl8',s:[.36,.16,.36],p:[bx,my+.28,0],c:'#c9b48a'});add(root,{g:'box',s:[.36,.08,.08],p:[bx-.24,my+.33,0],c:GUN});}
+  if(b&&b.id==='napalm'){for(const z of [-.2,.2])add(root,{g:'cyl',s:[.24,.4,.24],p:[bx+.2,Y+.2,z],c:'#8a3a1e'}); // twin fuel tanks and a rear nozzle
+    add(root,{g:'cyl',s:[.08,.34,.08],p:[bx-.05,my,0],r:[0,0,HALF],c:GUN});add(root,{g:'sph',s:[.08,.08,.08],p:[bx-.24,my,0],c:'#ffb02e',glow:1});}
+  if(b&&b.id==='booster')for(const z of [-.32,.32]){add(root,{g:'cyl',s:[.26,.5,.26],p:[bx+.06,my+.05,z],r:[0,0,HALF],c:'#55604a'}); // twin rocket motors
+    add(root,{g:'cone',s:[.3,.2,.3],p:[bx-.26,my+.05,z],r:[0,0,HALF],c:IRON});add(root,{g:'cyl',s:[.16,.03,.16],p:[bx-.37,my+.05,z],r:[0,0,HALF],c:'#9fd8ff',glow:1});}
   if(b&&b.id==='drone'){const ax=xb+.14,az=-(hw/2-.12); // drone control antenna: radio box, mast, whip, beacon
     add(root,{g:'box',s:[.2,.14,.16],p:[ax,Y+.07,az],c:'#4f5a36'});add(root,{g:'cyl',s:[.06,.12,.06],p:[ax,Y+.2,az],c:IRON});
     add(root,{g:'cyl',s:[.025,1.1,.025],p:[ax,Y+.81,az],c:'#2a2624'});add(root,{g:'box',s:[.03,.03,.22],p:[ax,Y+1.05,az],c:'#2a2624'});
@@ -2339,6 +2417,8 @@ function tankMesh3D(S,M,crew){
     for(let i=0;i<n;i++){const z=(i-(n-1)/2)*.1;add(top,{g:'box',s:[.22,.08,.06],p:[.02,.24,z],c:GUN});add(top,{g:'cyl',s:[.035,.5,.035],p:[.37,.25,z],r:[0,0,HALF],c:GUN});}
     add(top,{g:'box',s:[.1,.09,.09],p:[-.02,.18,-(gw/2+.09)],c:'#4f5a36'});}
   else{top.position.set(S.eng==='f'?xf-.25:xb+.42,Y+.01,0);root.add(top);}
+  if(t&&t.id==='howitzer'){add(top,{g:'box',s:[.6,.2,.5],p:[0,.1,0],c:'#55604a'});add(top,{g:'box',s:[.3,.24,.3],p:[.05,.3,0],c:IRON}); // howitzer: base, cradle, raised barrel
+    add(top,{g:'cyl',s:[.13,.9,.13],p:[.38,.52,0],r:[0,0,-1.05],c:GUN});add(top,{g:'cyl',s:[.2,.12,.2],p:[.73,.72,0],r:[0,0,-1.05],c:GUN});}
   if(t&&t.id==='tesla'){add(top,{g:'cyl',s:[.66,.28,.66],p:[0,.14,0],c:'#2a3240'});add(top,{g:'torusF',s:[.6,.6,.6],p:[0,.4,0],c:'#8fd8ff',glow:1});add(top,{g:'sph',s:[.26,.26,.26],p:[0,.48,0],c:'#d6f3ff',glow:1});}
   // fighting crews ride on the deck (beside the engine, away from the drone antenna), in a group so they read at any scale
   const CR=CREW.find(x=>x.id===crew);
@@ -2614,7 +2694,7 @@ function frame(now){
 }
 showTitle();
 requestAnimationFrame(frame);
-if(window.__SJ_TEST)window.__SJ_TEST({get G(){return G;},get mode(){return mode;},update,render,startRun,joy,openLevel,setMode:m=>{mode=m;},pick:i=>{if(onPick)onPick(lastCards[i%lastCards.length]);},get SAVE(){return SAVE;},CREW,CHASSIS,WORKSHOP,ARTIFACTS,openChest,useAbility,afterPick,MASTERY,addEnt,mkMod,upgradePool,AB,hurt,setSave:o=>{store.set(o);SAVE=loadSave();recoverRun();},setDate:d=>{QDATE=d;},ensureDaily,checkQuests,runStats,snapshotRun,QUESTS:{DAILY,MILESTONES},openGarage,renderGarage,endRun,audioInit,get R3(){return R3;},TANKS,LINES,tankId,tankMesh3D,openBossReward,CAPS,tryNitro,kill,frame:dt=>{if(mode==='play')update(hasCap('ozzy')?dt*1.4:dt);}});
+if(window.__SJ_TEST)window.__SJ_TEST({get G(){return G;},get mode(){return mode;},update,render,startRun,joy,openLevel,setMode:m=>{mode=m;},pick:i=>{if(onPick)onPick(lastCards[i%lastCards.length]);},get SAVE(){return SAVE;},CREW,CHASSIS,WORKSHOP,ARTIFACTS,openChest,useAbility,afterPick,MASTERY,addEnt,mkMod,upgradePool,AB,hurt,setSave:o=>{store.set(o);SAVE=loadSave();recoverRun();},setDate:d=>{QDATE=d;},ensureDaily,checkQuests,runStats,snapshotRun,QUESTS:{DAILY,MILESTONES},openGarage,renderGarage,endRun,audioInit,get R3(){return R3;},MODS,TANKS,LINES,tankId,tankMesh3D,openBossReward,CAPS,tryNitro,kill,frame:dt=>{if(mode==='play')update(hasCap('ozzy')?dt*1.4:dt);}});
 })();
 </script>
 </body>
