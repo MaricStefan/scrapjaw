@@ -192,6 +192,18 @@ run('iron','lou',true);run('ash','ida',true);run('ash','sid',false);run('iron','
  G=run('lars');const P=G.p;P.nitroCd=5;let n=0;for(const tr of api.R3.trees){if(tr.flat||n>=8)continue;P.x=tr.x;P.y=tr.z;api.render();n++;}
  assert.ok(n===8&&P.nitroCd<=0,'Lars: 8 trees refill Boost');api.endRun('quit');
  Object.assign(S,saved);console.log('captains ok:',api.CAPS.length);}
+// --- fighting crews: each one hurts a target on its own (no modules fitted), and Destroy 100 tanks unlocks the Radio Operator ---
+{const S=api.SAVE,saved={crew:S.crew.slice(),selCrew:S.selCrew,selMap:S.selMap,done:S.ms.done.m_tanks,prog:S.ms.prog.m_tanks};S.selMap='dust';
+ const fight=api.CREW.filter(c=>c.fight).map(c=>c.id);assert.strictEqual(fight.length,5,'five fighting crews');S.crew=fight.slice();const res={};
+ for(const id of fight){S.selCrew=id;api.startRun();const G=api.G,P=G.p;G.spawnT=G.helperT=1e9;G.ents=G.ents.filter(e=>e.d.neutral);
+   for(const k in P.modules)P.modules[k]=null;
+   const dummy=api.addEnt('tank',P.x+200,P.y);dummy.hp=dummy.max=1e6;dummy.d=Object.assign({},dummy.d,{spd:0,shoot:null,contact:0});
+   for(let i=0;i<60*6;i++){api.joy.dx=api.joy.dy=0;P.v=0;api.update(1/60);P.hp=P.maxHp;if(api.mode!=='play'){api.pick(0);api.setMode('play');}if(i%60===0)api.render();}
+   res[id]=Math.round(1e6-dummy.hp);assert.ok(dummy.hp<1e6,id+' hurts enemies on its own');api.endRun('quit');}
+ S.crew=fight.filter(c=>c!=='radio');S.ms.done.m_tanks=false;S.ms.prog.m_tanks=0;api.startRun();const G=api.G;G.rs.on=true;G.rs.kill.tank=100;api.checkQuests(false);
+ assert.ok(S.crew.includes('radio')&&S.ms.done.m_tanks,'Destroy 100 tanks unlocks the Radio Operator');api.endRun('quit');
+ S.crew=saved.crew;S.selCrew=saved.selCrew;S.selMap=saved.selMap;S.ms.done.m_tanks=saved.done;S.ms.prog.m_tanks=saved.prog;
+ console.log('fighting crews ok:',JSON.stringify(res));}
 // --- ranged and static enemies can't pile up (per-type caps) ---
 {api.SAVE.selMap='dust';api.startRun();const G=api.G,P=G.p;G.stage=2;let maxT=0,maxW=0;
  for(let i=0;i<60*120;i++){if(api.mode==='play'){api.joy.dx=0;api.joy.dy=0;api.update(1/60);P.hp=P.maxHp;if(G.boss)G.boss=null,G.bossSpawned=true;
