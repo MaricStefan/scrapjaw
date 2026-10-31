@@ -169,6 +169,29 @@ run('iron','lou',true);run('ash','ida',true);run('ash','sid',false);run('iron','
  const bare={front:api.mkMod('plow'),side:api.mkMod('flamer'),back:api.mkMod('drone'),top:api.mkMod('tesla')};
  for(const id of all)for(const M of [full,bare]){const m=api.tankMesh3D(api.TANKS[id],M);assert.ok(m.root.children.length>10&&m.hull&&m.stacks.length,id+' builds');}
  Object.assign(S,saved);console.log('tank lines ok:',all.length,'tanks');}
+// --- captains: every one plays a short run, and each special effect works ---
+{const S=api.SAVE,saved={caps:S.caps.slice(),selCap:S.selCap,selMap:S.selMap};S.caps=api.CAPS.map(c=>c.id);S.selMap='dust';
+ for(const c of api.CAPS){S.selCap=c.id;api.startRun();const G=api.G,P=G.p;
+   for(let i=0;i<60*40;i++){if(api.mode==='play'){api.joy.dx=Math.cos(i/80);api.joy.dy=Math.sin(i/60);if(i%300===0)api.tryNitro();api.frame(1/60);P.hp=Math.max(P.hp,P.maxHp*0.5);if(i%120===0)api.render();}else api.pick(0);}
+   assert.ok(isFinite(P.hp)&&isFinite(P.x)&&G.t>30,c.id+' plays a run');api.endRun('quit');}
+ const run=id=>{S.selCap=id;api.startRun();const G=api.G;G.spawnT=G.helperT=1e9;G.ents=G.ents.filter(e=>e.d.neutral);api.joy.dx=api.joy.dy=0;api.update(1/60);return G;};
+ const res={};let G;
+ G=run('sarge');const cd0=G.p.modules.front.cd,ab0=api.mkMod('broadside').ab.cd;
+ G.overtime=true;G.otT=0;G.otNext=0.001;api.update(1/60);const ot0=G.otSilver;api.endRun('quit');
+ G=run('tess');assert.ok(G.p.modules.front.cd<cd0*0.75&&api.mkMod('broadside').ab.cd>ab0*1.3,'Tess: faster guns, slower abilities');api.endRun('quit');
+ G=run('marta');G.crateT=0;api.update(1/60);assert.strictEqual(G.crates.length,0,'Marta: no health crates');
+ G.p.hp=50;api.addEnt('grunt',G.p.x,G.p.y);for(let i=0;i<5;i++)api.update(1/60);assert.ok(G.p.hp>50,'Marta: eating a soldier heals');res.marta=G.p.hp;api.endRun('quit');
+ G=run('hank');const hp0=G.p.maxHp;api.kill(api.addEnt('tank',G.p.x+300,G.p.y));api.kill(api.addEnt('grunt',G.p.x+300,G.p.y));assert.strictEqual(G.p.maxHp,hp0+1,'Hank: a vehicle adds max HP, a soldier does not');api.endRun('quit');
+ G=run('rosa');api.tryNitro();assert.ok(G.p.nitro>2,'Rosa: longer Boost');api.endRun('quit');
+ G=run('cass');api.tryNitro();for(let i=0;i<30;i++){api.joy.dx=1;api.update(1/60);}assert.ok(G.burns.length>0,'Cass: Boost leaves fire');api.endRun('quit');
+ S.selCap='kat';api.startRun();assert.ok(api.G.helperT<20,'Kat: first cart comes sooner');api.endRun('quit');
+ G=run('tomo');assert.strictEqual(G.p.rerolls,0,'Tomo: no rerolls');G.p.modules.side=null;G.lvQ=[3];api.openLevel();api.pick(0);
+ assert.ok(Object.values(G.p.modules).some(m=>m&&m.id!=='cannon'&&m.lvl===2),'Tomo: new module starts at level 2');api.setMode('play');api.endRun('quit');
+ G=run('nell');G.overtime=true;G.otT=0;G.otNext=0.001;api.update(1/60);assert.ok(G.otSilver>=ot0*1.9,'Nell: double Overtime pay '+G.otSilver+' vs '+ot0);api.endRun('quit');
+ G=run('ozzy');const t0=G.t;for(let i=0;i<60;i++)api.frame(1/60);assert.ok(Math.abs(G.t-t0-1.4)<0.05,'Ozzy: the game runs 1.4x '+(G.t-t0));api.endRun('quit');
+ G=run('lars');const P=G.p;P.nitroCd=5;let n=0;for(const tr of api.R3.trees){if(tr.flat||n>=8)continue;P.x=tr.x;P.y=tr.z;api.render();n++;}
+ assert.ok(n===8&&P.nitroCd<=0,'Lars: 8 trees refill Boost');api.endRun('quit');
+ Object.assign(S,saved);console.log('captains ok:',api.CAPS.length);}
 // --- ranged and static enemies can't pile up (per-type caps) ---
 {api.SAVE.selMap='dust';api.startRun();const G=api.G,P=G.p;G.stage=2;let maxT=0,maxW=0;
  for(let i=0;i<60*120;i++){if(api.mode==='play'){api.joy.dx=0;api.joy.dy=0;api.update(1/60);P.hp=P.maxHp;if(G.boss)G.boss=null,G.bossSpawned=true;

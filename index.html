@@ -508,7 +508,18 @@ const CAPS=[
   {id:'sid',name:'Scavenger Sid',perk:'+50% silver from every run. 20% less max HP.',cost:350,ap:p=>{p.silverMult*=1.5;p.maxHp=Math.round(p.maxHp*0.8);p.hp=p.maxHp;}},
   {id:'ida',name:'Iron Ida',perk:'+60 max HP and 10% less damage taken. 15% slower.',cost:400,ap:p=>{p.maxHp+=60;p.hp=p.maxHp;p.taken*=0.9;p.spdMult*=0.85;}},
   {id:'lou',name:'Lucky Lou',perk:'Rare and Epic upgrades twice as often, +2 rerolls. 10% less weapon damage.',cost:450,ap:p=>{p.luck=1;p.rerolls+=2;p.wdm*=0.9;}},
+  {id:'lars',name:'Logger Lars',perk:'Every 8 trees you flatten refill Boost. Boost recharges 60% slower.',cost:400,ap:p=>{p.nitroMax*=1.6;}},
+  {id:'rosa',name:'Rally Rosa',perk:'Boost is 25% faster and lasts 30% longer. 12% slower the rest of the time.',cost:500,ap:p=>{p.spdMult*=0.88;}},
+  {id:'hank',name:'Hoarder Hank',perk:'Every vehicle you destroy adds 1 max HP for the run. Boost recharges 40% slower.',cost:700,ap:p=>{p.nitroMax*=1.4;}},
+  {id:'marta',name:'Field Medic Marta',perk:'Every soldier you eat repairs 2 hull. No health crates drop.',cost:800,ap:p=>{}},
+  {id:'cass',name:'Cinder Cass',perk:'Ramming sets enemies on fire, and Boost leaves a burning track. 20% less max HP.',cost:900,ap:p=>{p.maxHp=Math.round(p.maxHp*0.8);p.hp=p.maxHp;}},
+  {id:'kat',name:'Colonel Kat',perk:'Repair and magnet carts show up twice as often. 25% slower.',cost:900,ap:p=>{p.spdMult*=0.75;}},
+  {id:'tess',name:'Trigger Tess',perk:'Weapons fire 40% faster. Abilities recharge 40% slower.',cost:1000,ap:p=>{}},
+  {id:'tomo',name:'Tinker Tomo',perk:'Every module you bolt on starts at level 2. No rerolls.',cost:1200,ap:p=>{p.rerolls=0;}},
+  {id:'nell',name:'Night Owl Nell',perk:'Overtime pays double silver, and every stage starts with Boost ready. 15% more enemies before Overtime.',cost:1500,ap:p=>{}},
+  {id:'ozzy',name:'Overclock Ozzy',perk:'The whole game runs 1.4× faster. +40% silver.',cost:2500,ap:p=>{p.silverMult*=1.4;}},
 ];
+const HANK_V=['biker','tank','bomber','heavy']; // what counts as a vehicle for Hoarder Hank (by base type)
 const START_MODS=['cannon','broadside','mines','turret'];
 // artifacts: one supply chest per stage offers a choice of two; they last the rest of the run (checked with hasArt)
 const ARTIFACTS={
@@ -575,6 +586,7 @@ const TANKS={
 };
 const tankId=p=>{const L=LINES[p.chassis]||LINES.standard;return p.tier&&p.tline?L[p.tline][Math.min(3,p.tier)-1]:L.base;};
 const hasCrew=id=>!!(G&&G.crew===id);
+const hasCap=id=>!!(G&&G.capId===id);
 // workshop: owning any item in a category opens its tier 2, owning three opens tier 3. mod = a module unlock, the rest are permanent perks
 const WORKSHOP=[
   {id:'guns',name:'Guns',items:[
@@ -711,16 +723,17 @@ function newPlayer(){
     ramDmg:28,magnet:95,gunO:0,bulk:0,rMul:1,chassis:'standard',tier:0,tline:'',hitT:0,armor:0,level:1,xp:0,xpNext:6,nitro:0,nitroCd:0,nitroMax:7,hurt:0,odo:0,turA:0,
     modules:{front:mkMod('cannon'),side:null,back:null,top:null},kills:0,eaten:0,iframes:0,rerolls:2,wdm:1,taken:1,luck:0,silverMult:1,totalXp:0};
 }
-function mkMod(id,wdm){const d=MODS[id];return {id,lvl:1,dmg:d.dmg*(wdm||1),cd:d.cd*(hasPerk('loaders')?0.92:1)*(hasCrew('loader')?0.9:1),range:(d.range||0)*(hasCrew('spotter')?1.15:1),radius:d.radius||0,shots:1,extra:1,t:0,act:0,ab:{cd:AB[id].cd,t:0,pow:0}};}
+function mkMod(id,wdm){const d=MODS[id];return {id,lvl:1,dmg:d.dmg*(wdm||1),cd:d.cd*(hasPerk('loaders')?0.92:1)*(hasCrew('loader')?0.9:1)/(hasCap('tess')?1.4:1),range:(d.range||0)*(hasCrew('spotter')?1.15:1),radius:d.radius||0,shots:1,extra:1,t:0,act:0,ab:{cd:AB[id].cd*(hasCap('tess')?1.4:1),t:0,pow:0}};}
 function newGame(mapId,capId){
   const mapDef=MAPS.find(m=>m.id===(mapId||SAVE.selMap))||MAPS[0];const cap=CAPS.find(c=>c.id===(capId||SAVE.selCap))||CAPS[0];
   const P=newPlayer();cap.ap(P);applyPerks(P);
-  const ch=CHASSIS.find(c=>c.id===SAVE.selChassis)||CHASSIS[0];P.chassis=ch.id;ch.ap(P);G={crew:SAVE.selCrew}; // provisional, so mkMod sees the crew
+  const ch=CHASSIS.find(c=>c.id===SAVE.selChassis)||CHASSIS[0];P.chassis=ch.id;ch.ap(P);G={crew:SAVE.selCrew,capId:cap.id}; // provisional, so mkMod sees the crew and captain
   P.modules.front=mkMod('cannon',P.wdm);if(hasPerk('twinmounts'))P.modules.side=mkMod('broadside',P.wdm);
   G={t:0,stage:1,stageT:0,boss:null,bossSpawned:false,bossT:0,overtime:false,cleared:false,otT:0,otNext:OT_PAY,otSilver:0,unlockMsg:'',droneOD:0,burns:[],spawnT:1.5,crateT:22,mortarT:2,neutT:0,
     ents:[],pb:[],eb:[],mines:[],pick:[],parts:[],texts:[],strikes:[],bolts:[],drones:[],crates:[],tracks:[],drops:[],fires:[],helperT:38,helperN:0,rings:[],decals:[],flash:0,redflash:0,hitstop:0,combo:0,comboT:0,
-    p:P,mapDef,cap,crew:SAVE.selCrew,bossKills:0,lvQ:[],shake:0,cam:{x:WORLD/2,y:WORLD/2},
+    p:P,mapDef,cap,capId:cap.id,crew:SAVE.selCrew,bossKills:0,lvQ:[],shake:0,cam:{x:WORLD/2,y:WORLD/2},
     sentries:[],hazards:[],mastQ:[],arts:[],chests:[],chestT:rnd(20,40),clouds:[],waves:[],rs:{on:false,eat:{},kill:{}},qDone:[],qT:0.5};
+  if(hasCap('kat'))G.helperT/=2;
   for(let i=0;i<75;i++)spawnNeutral(true);
   if(R3.on)setupWorld(G.mapDef);
 }
@@ -905,6 +918,7 @@ function hurt(e,dmg){
 }
 function kill(e){
   e.dead=true;const p=G.p;const bt_=e.d.base||e.type;G.rs.kill[bt_]=(G.rs.kill[bt_]||0)+1;
+  if(hasCap('hank')&&!e.d.neutral&&HANK_V.includes(bt_)){p.maxHp+=1;p.hp+=1;}
   parts(e.x,e.y,e.d.boss?60:10,e.d.neutral?'#9a8a6a':'#e2722c',e.d.boss?380:180,e.d.boss?9:5,e.d.boss?1.1:0.5);
   if(e.d.boss){
     if(e.twin&&!e.twin.dead){const o=e.twin;o.twin=null;o.enraged=true;if(G.boss===e)G.boss=o; // first kiln down: the other goes berserk
@@ -1267,7 +1281,7 @@ function openBossReward(){
     {rar:'b',t:'Engine overhaul',line:'s',desc:'Becomes the '+next('s')+' ('+LN.sn+').',icon:'engine',stats:[['top speed',r1(p.baseSpeed*p.spdMult),r1(p.baseSpeed*p.spdMult*1.12)],['turning',(p.turn*p.turnMult).toFixed(1),(p.turn*p.turnMult*1.15).toFixed(1)],['tank size',r1(tankR(newRank,p.bulk)*p.rMul),r1(tankR(newRank,Math.max(0,p.bulk+BULK.engineBoss))*p.rMul)]],ap:()=>{p.spdMult*=1.12;p.turnMult*=1.15;p.bulk=Math.max(0,p.bulk+BULK.engineBoss);}},
   ];
   showCards('Fortress destroyed','Your tank grows to rank '+newRank+'. You can now devour '+RANK_EATS[newRank]+'.',cards,c=>{
-    c.ap();p.rank=newRank;p.tier++;p.tline=c.line;sfx('level');G.stage++;G.stageT=0;G.bossSpawned=false;G.bossT=0;G.chestT=rnd(20,40);
+    c.ap();p.rank=newRank;p.tier++;p.tline=c.line;if(hasCap('nell'))p.nitroCd=0;sfx('level');G.stage++;G.stageT=0;G.bossSpawned=false;G.bossT=0;G.chestT=rnd(20,40);
     hideCards();resume();banner('Stage '+G.stage,'Now driving the '+TANKS[tankId(p)].n+'. Boss in '+BOSS_AT+' seconds.');
   },false);
 }
@@ -1344,7 +1358,7 @@ function makeModuleCards(){
   for(const id in MODS){const d=MODS[id];if(!p.modules[d.slot]&&modUnlocked(id))opts.push(id);}
   const out=[];
   while(out.length<3&&opts.length){const id=opts.splice(Math.floor(Math.random()*opts.length),1)[0];const d=MODS[id];
-    out.push({rar:'n',t:d.name,icon:id,desc:d.desc+' Mounts on the '+SLOT_NAME[d.slot].toLowerCase()+'. Ability: '+AB[id].name+'.',ap:()=>{p.bulk+=BULK.module;p.modules[d.slot]=mkMod(id,p.wdm);if(id==='drone')G.drones.length=0;}});}
+    out.push({rar:'n',t:d.name,icon:id,desc:d.desc+' Mounts on the '+SLOT_NAME[d.slot].toLowerCase()+'. Ability: '+AB[id].name+'.',ap:()=>{p.bulk+=BULK.module;p.modules[d.slot]=mkMod(id,p.wdm);if(id==='drone')G.drones.length=0;if(hasCap('tomo')){const m=p.modules[d.slot];m.lvl=2;m.dmg*=1.25;}}});}
   return out;
 }
 let curLevel=0;
@@ -1567,7 +1581,7 @@ const endJoy=e=>{if(e.pointerId===joy.id)releaseJoy();};
 cvs.addEventListener('pointerup',endJoy);cvs.addEventListener('pointercancel',endJoy);
 addEventListener('keydown',e=>{keys[e.key.toLowerCase()]=true;if(e.key>='1'&&e.key<='4'&&G&&!e.repeat){const k=abSlots()[+e.key-1];if(k)useAbility(k);}if(e.key===' '){tryNitro();e.preventDefault();}if(e.key==='Escape'){mode==='play'?pauseGame():null;}});
 addEventListener('keyup',e=>{keys[e.key.toLowerCase()]=false;});
-function tryNitro(){const p=G&&G.p;if(!p||mode!=='play')return;if(p.nitroCd<=0){p.nitro=1.6;if(hasArt('shockboost'))explode(p.x,p.y,110,25*p.wdm,false,true);p.nitroCd=p.nitroMax;G.shake+=3;sfx('nitro');buzz(15);}}
+function tryNitro(){const p=G&&G.p;if(!p||mode!=='play')return;if(p.nitroCd<=0){p.nitroLen=hasCap('rosa')?2.08:1.6;p.nitro=p.nitroLen;if(hasArt('shockboost'))explode(p.x,p.y,110,25*p.wdm,false,true);p.nitroCd=p.nitroMax;G.shake+=3;sfx('nitro');buzz(15);}}
 $('#nitro').addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();tryNitro();});
 $('#pauseBtn').addEventListener('click',pauseGame);
 $('#resumeBtn').addEventListener('click',()=>{$('#pause').classList.remove('show');resume();});
@@ -1591,7 +1605,7 @@ function update(dt){
   let ix=joy.dx,iy=joy.dy;
   if(keys.w||keys.arrowup)iy-=1;if(keys.s||keys.arrowdown)iy+=1;if(keys.a||keys.arrowleft)ix-=1;if(keys.d||keys.arrowright)ix+=1;
   const mag=Math.hypot(ix,iy);
-  const maxSp=p.baseSpeed*p.spdMult*(1-p.rank*0.03)*bulkSlow(p.bulk)*(p.nitro>0?1.75:1)*(p.steamed?0.65:1);
+  const maxSp=p.baseSpeed*p.spdMult*(1-p.rank*0.03)*bulkSlow(p.bulk)*(p.nitro>0?(hasCap('rosa')?2.19:1.75):1)*(p.steamed?0.65:1);
   let target=0;
   if(mag>0.15){const ta=Math.atan2(iy,ix);const df=angDiff(p.a,ta);const tr=p.turn*p.turnMult*dt*(p.nitro>0?0.75:1);
     p.a+=clamp(df,-tr,tr);target=maxSp*Math.min(1,mag)*Math.max(0.3,Math.cos(df));}
@@ -1604,6 +1618,7 @@ function update(dt){
   p.nitro-=dt;p.nitroCd-=dt;p.ccd=(p.ccd||0)-dt;p.recoil=Math.max(0,(p.recoil||0)-dt*6);p.chomp=Math.max(0,(p.chomp||0)-dt*5);G.comboT-=dt;p.hurt-=dt;p.iframes-=dt;
   if(p.nitro>0&&hasArt('nitromines')){p.nmT=(p.nmT||0)-dt;if(p.nmT<=0){p.nmT=0.3;G.mines.push({x:p.x-Math.cos(p.a)*p.r*1.4,y:p.y-Math.sin(p.a)*p.r*1.4,arm:0.3,dmg:35*p.wdm,rad:65,life:12});if(G.mines.length>40)G.mines.shift();}}
   if(p.nitro>0)parts(p.x-Math.cos(p.a)*p.r*1.2,p.y-Math.sin(p.a)*p.r*1.2,1,'#ff9b2e',80,6,0.3);
+  if(p.nitro>0&&hasCap('cass')){p.cfT=(p.cfT||0)-dt;if(p.cfT<=0){p.cfT=0.12;G.burns.push({x:p.x-Math.cos(p.a)*p.r,y:p.y-Math.sin(p.a)*p.r,r:22,life:3,max:3,dps:8*p.wdm});if(G.burns.length>44)G.burns.shift();}}
   // tracks
   if(!G.lastTrack||Math.hypot(p.x-G.lastTrack.x,p.y-G.lastTrack.y)>p.r*0.8){
     G.lastTrack={x:p.x,y:p.y};G.tracks.push({x:p.x,y:p.y,a:p.a,r:p.r,life:40});if(G.tracks.length>600)G.tracks.shift();}
@@ -1615,10 +1630,10 @@ function update(dt){
   if(sw&&!G.swarm){banner('Swarm',"Hold the line, they're pouring in.");sfx('alarm');G.spawnT=0;}
   G.swarm=sw;
   if(G.boss)G.bossT+=dt;
-  if(G.overtime){G.otT+=dt;if(G.otT>=G.otNext){G.otNext+=OT_PAY;const sv=Math.round(25*G.mapDef.silver*p.silverMult*(1+G.otT/180));G.otSilver+=sv;
+  if(G.overtime){G.otT+=dt;if(G.otT>=G.otNext){G.otNext+=OT_PAY;const sv=Math.round(25*G.mapDef.silver*p.silverMult*(1+G.otT/180)*(hasCap('nell')?2:1));G.otSilver+=sv;
     addText(p.x,p.y-p.r-14,'+'+sv+' silver','#d9e1ea');sfx('heal');buzz(15);}}
   G.spawnT-=dt;
-  if(G.spawnT<=0){const w=WAVES[G.stage];G.spawnT=w.iv*G.mapDef.spawn*(G.overtime?0.25:G.swarm?0.5:1)*(G.boss?1.8:1)*Math.max(0.6,1-escT()/300);spawnHostiles();}
+  if(G.spawnT<=0){const w=WAVES[G.stage];G.spawnT=w.iv*G.mapDef.spawn*(G.overtime?0.25:G.swarm?0.5:1)*(G.boss?1.8:1)*Math.max(0.6,1-escT()/300)/(hasCap('nell')&&!G.overtime?1.15:1);spawnHostiles();}
   G.neutT-=dt;
   if(G.neutT<=0){G.neutT=1;let n=0;for(const e of G.ents)if(e.d.neutral)n++;for(let i=n;i<70;i+=4)spawnNeutral(false);}
   if(G.overtime){G.mortarT-=dt;if(G.mortarT<=0){G.mortarT=2.4;G.strikes.push({x:p.x+Math.cos(p.a)*p.v*0.8+rnd(-40,40),y:p.y+Math.sin(p.a)*p.v*0.8+rnd(-40,40),t:1.2,max:1.2,r:70,dmg:20});}}
@@ -1626,9 +1641,9 @@ function update(dt){
   for(const c of G.chests)if(!c.got&&Math.hypot(p.x-c.x,p.y-c.y)<p.r+22){c.got=true;parts(c.x,c.y,16,'#ffd25a',220,6,0.6);sfx('magnet');buzz(20);G.chestOpen=true;}
   G.chests=G.chests.filter(c=>!c.got);
   G.crateT-=dt;
-  if(G.crateT<=0){G.crateT=26;if(G.crates.length<2){const a=Math.random()*TAU,r=rnd(320,620);G.crates.push({x:clamp(p.x+Math.cos(a)*r,80,WORLD-80),y:clamp(p.y+Math.sin(a)*r,80,WORLD-80)});}}
+  if(G.crateT<=0){G.crateT=26;if(G.crates.length<2&&!hasCap('marta')){const a=Math.random()*TAU,r=rnd(320,620);G.crates.push({x:clamp(p.x+Math.cos(a)*r,80,WORLD-80),y:clamp(p.y+Math.sin(a)*r,80,WORLD-80)});}}
   G.helperT-=dt;
-  if(G.helperT<=0){G.helperT=rnd(40,55);
+  if(G.helperT<=0){G.helperT=rnd(40,55)/(hasCap('kat')?2:1);
     const type=(p.hp<p.maxHp*0.5||G.helperN%2===1)?'repaircart':'magnetcart';G.helperN++;
     const a=Math.random()*TAU,r=spawnDist(a);addEnt(type,p.x+Math.cos(a)*r,p.y+Math.sin(a)*r);
     banner('',type==='magnetcart'?'A magnet cart is nearby. Destroy it!':'A repair cart is nearby. Destroy it!');}
@@ -1754,7 +1769,7 @@ if(!e.d.stat&&!e.d.boss){e.x+=b.vx*0.012;e.y+=b.vy*0.012;}let bd=b.dmg;if(e.d.ar
 function contact(e,dx,dy,dist,rr){
   const p=G.p,d=e.d;
   if(d.edible>=0&&p.rank>=d.edible&&!d.boss){
-    e.dead=true;p.eaten++;if(hasArt('plating')&&p.eaten%25===0){p.maxHp+=4;p.hp+=4;addText(p.x,p.y-p.r-12,'+4 max HP','#7be37b');}G.rs.eat[d.base||e.type]=(G.rs.eat[d.base||e.type]||0)+1;gainXp(d.xp);sfx('eat',d.xp>=9?2:1);p.chomp=d.xp>=5?1:0.5;if(d.xp>=9)buzz(12);
+    e.dead=true;p.eaten++;if(hasArt('plating')&&p.eaten%25===0){p.maxHp+=4;p.hp+=4;addText(p.x,p.y-p.r-12,'+4 max HP','#7be37b');}G.rs.eat[d.base||e.type]=(G.rs.eat[d.base||e.type]||0)+1;gainXp(d.xp);if(hasCap('marta')&&(d.base||e.type)==='grunt')p.hp=Math.min(p.maxHp,p.hp+2);sfx('eat',d.xp>=9?2:1);p.chomp=d.xp>=5?1:0.5;if(d.xp>=9)buzz(12);
     parts(e.x,e.y,d.neutral?6:5,d.neutral?'#8f7f5f':'#a8432b',140,4,0.35);
     if(d.xp>=5)addText(e.x,e.y-e.r,'+'+d.xp,COL.gold||'#e8ad2c');
     G.shake=Math.min(10,G.shake+(d.xp>=9?2.5:0.6));
@@ -1771,6 +1786,7 @@ function contact(e,dx,dy,dist,rr){
     if(p.nitro>0&&hasPerk('steamroller')&&!d.boss&&!d.stat)e.stun=1.2;
     if(front&&plow)rd+=p.modules.front.dmg;
     hurt(e,rd);if(e.dead&&hasArt('vampire'))p.hp=Math.min(p.maxHp,p.hp+3);
+    if(hasCap('cass')&&!e.dead){e.burn=3;e.burnDps=Math.max(e.burnDps||0,p.ramDmg*0.4);}
     if(d.zap&&p.ccd<=0){G.bolts.push({pts:[{x:e.x,y:e.y},{x:p.x,y:p.y}],life:0.15});sfx('zap');}
     if(d.contact&&p.ccd<=0){dmgPlayer(d.contact*(front&&plow?0.5:1)*(1+(G.stage-1)*0.2));p.ccd=0.3;}
   }
@@ -2206,7 +2222,8 @@ function flattenTrees(p){
       R3.v.set(t.x+dx*t.s*1.0,t.s*0.3,t.z+dz*t.s*1.0);
       if(t.round){R3.s.set(t.s*0.95,t.s*0.85,t.s*0.95);R3.m.compose(R3.v,R3.q,R3.s);D.leaf2.setMatrixAt(t.i,R3.m);}
       else{R3.s.set(t.s*0.8,t.s*1.3,t.s*0.8);R3.m.compose(R3.v,R3.q,R3.s);D.leaf.setMatrixAt(t.i,R3.m);}
-      if(mode==='play'){parts(t.x,t.z,5,G.mapDef.pal.leaf,120,5,0.5);sfx('pop');}
+      if(mode==='play'){parts(t.x,t.z,5,G.mapDef.pal.leaf,120,5,0.5);sfx('pop');
+        if(hasCap('lars')){p.trees=(p.trees||0)+1;if(p.trees%8===0&&p.nitroCd>0){p.nitroCd=0;addText(p.x,p.y-p.r-12,'Boost ready','#9fe0ff');}}}
     }}}
   if(changed){D.trunk.instanceMatrix.needsUpdate=true;D.leaf.instanceMatrix.needsUpdate=true;D.leaf2.instanceMatrix.needsUpdate=true;}
 }
@@ -2498,7 +2515,7 @@ function updateHUD(){
   else hud.bb.classList.remove('on');
   const cd=p.nitroCd>0?Math.round(100*p.nitroCd/p.nitroMax):0;
   hud.nitro.style.setProperty('--cd',cd+'%');hud.nitro.classList.toggle('active',p.nitro>0);
-  hud.nif.style.width=(p.nitro>0?100*p.nitro/1.6:100-cd)+'%';hud.niBar.classList.toggle('full',cd===0);
+  hud.nif.style.width=(p.nitro>0?100*p.nitro/(p.nitroLen||1.6):100-cd)+'%';hud.niBar.classList.toggle('full',cd===0);
   const ak=G.arts.join();if(hudCache.arts!==ak){hudCache.arts=ak;const el=$('#arts');el.innerHTML='';G.arts.forEach(id=>{const sp=document.createElement('span');sp.title=ARTIFACTS[id].name;sp.innerHTML=svgIcon(ARTIFACTS[id].icon);el.appendChild(sp);});}
   const sk=['front','side','back','top'].map(k=>{const m=p.modules[k];return m?m.id+m.lvl+(m.mastery||''):'-';}).join();
   if(hudCache.slots!==sk){hudCache.slots=sk;hud.slots.innerHTML='';hud.slotEl={};
@@ -2542,7 +2559,7 @@ let last=performance.now();
 function frame(now){
   const dt=Math.min(0.033,Math.max(0,(now-last)/1000));last=now;
   if(mode==='title'||mode==='garage'){G.p.a+=dt*0.3;G.t+=dt;G.cam.x=G.p.x;G.cam.y=G.p.y+40;}
-  if(mode==='play'){if(G.hitstop>0)G.hitstop-=dt;else update(dt);}
+  if(mode==='play'){if(G.hitstop>0)G.hitstop-=dt;else update(hasCap('ozzy')?dt*1.4:dt);}
   if(G){G.flash=Math.max(0,G.flash-dt*1.6);G.redflash=Math.max(0,G.redflash-dt*1.8);}
   musSync();
   render();updateHUD();
@@ -2550,7 +2567,7 @@ function frame(now){
 }
 showTitle();
 requestAnimationFrame(frame);
-if(window.__SJ_TEST)window.__SJ_TEST({get G(){return G;},get mode(){return mode;},update,render,startRun,joy,openLevel,setMode:m=>{mode=m;},pick:i=>{if(onPick)onPick(lastCards[i%lastCards.length]);},get SAVE(){return SAVE;},CREW,CHASSIS,WORKSHOP,ARTIFACTS,openChest,useAbility,afterPick,MASTERY,addEnt,mkMod,upgradePool,AB,hurt,setSave:o=>{store.set(o);SAVE=loadSave();recoverRun();},setDate:d=>{QDATE=d;},ensureDaily,checkQuests,runStats,snapshotRun,QUESTS:{DAILY,MILESTONES},openGarage,renderGarage,endRun,audioInit,get R3(){return R3;},TANKS,LINES,tankId,tankMesh3D,openBossReward});
+if(window.__SJ_TEST)window.__SJ_TEST({get G(){return G;},get mode(){return mode;},update,render,startRun,joy,openLevel,setMode:m=>{mode=m;},pick:i=>{if(onPick)onPick(lastCards[i%lastCards.length]);},get SAVE(){return SAVE;},CREW,CHASSIS,WORKSHOP,ARTIFACTS,openChest,useAbility,afterPick,MASTERY,addEnt,mkMod,upgradePool,AB,hurt,setSave:o=>{store.set(o);SAVE=loadSave();recoverRun();},setDate:d=>{QDATE=d;},ensureDaily,checkQuests,runStats,snapshotRun,QUESTS:{DAILY,MILESTONES},openGarage,renderGarage,endRun,audioInit,get R3(){return R3;},TANKS,LINES,tankId,tankMesh3D,openBossReward,CAPS,tryNitro,kill,frame:dt=>{if(mode==='play')update(hasCap('ozzy')?dt*1.4:dt);}});
 })();
 </script>
 </body>
