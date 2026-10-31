@@ -87,7 +87,8 @@ run('iron','lou',true);run('ash','ida',true);run('ash','sid',false);run('iron','
 {api.SAVE.selMap='dust';api.startRun();const G=api.G,P=G.p;
  for(let i=0;i<60*25;i++){if(api.mode==='play'){api.joy.dx=1;api.joy.dy=0.3;api.update(1/60);P.hp=P.maxHp;}else api.pick(0);}
  const slotOf={cannon:'front',plow:'front',broadside:'side',flamer:'side',mines:'back',drone:'back',layer:'back',turret:'top',tesla:'top'};
- for(const id in api.AB){
+ api.setMode('play');assert.ok(!api.useAbility('front')&&!api.upgradePool().some(c=>c.t==='Main Gun'&&/ability/.test(JSON.stringify(c.s(1)))),'Main Gun has no ability');
+ for(const id in api.AB){if(api.AB[id].none)continue;
    api.setMode('play');const slot=slotOf[id];P.modules[slot]=api.mkMod(id,P.wdm);
    let foe=G.ents.find(e=>!e.d.neutral&&!e.d.boss&&!e.dead);
    if(!foe){foe={type:'tank',d:{hp:9999,r:16,spd:0,stat:1,contact:0},hp:9999,max:9999,r:16,a:0,ta:0,t:99,slow:0,hit:0,flash:0,dead:false,st:'walk',pt:2,spin:0,t2:0,t3:0};G.ents.push(foe);} // every ability needs something to hit
@@ -257,12 +258,12 @@ run('iron','lou',true);run('ash','ida',true);run('ash','sid',false);run('iron','
    assert.strictEqual(m.mastery,pick?'a':'p',id+' mastery applied');
    const front=dummy(P.x+120,P.y),back=dummy(P.x-120,P.y);
    while(api.mode!=='play'){api.pick(0);api.setMode('play');}
-   const ex0=m.extra;assert.ok(api.useAbility(slot),id+'/'+m.mastery+' ability fires');
+   const ex0=m.extra;assert.ok(api.AB[id].none?!api.useAbility(slot):api.useAbility(slot),id+'/'+m.mastery+' ability fires');
    const r={burns:G.burns.length,mines:G.mines.length,sentries:G.sentries.length,backHit:back.hp<1e6};
    for(let i=0;i<60*2;i++){if(api.mode!=='play'){api.pick(0);api.setMode('play');}api.update(1/60);P.hp=P.maxHp;if(i%20===0){api.render();api.R3.on=false;api.render();api.R3.on=true;}}
    r.backHit2=back.hp<1e6;res[id+'/'+m.mastery]=r;
    if(m.mastery==='a'){
-     if(id==='cannon')assert.ok(r.burns>3,'Siege Shell leaves fire');
+     if(id==='cannon')assert.ok(m.extra===3&&m.dmg>24*1.2,'Sabot Rounds pierce and hit harder');
      if(id==='plow')assert.ok(r.backHit,'Earthquake hits behind you');
      if(id==='flamer')assert.ok(r.burns>=12,'Inferno Ring');
      if(id==='mines')assert.ok(r.mines>=12,'Carpet doubles mines');

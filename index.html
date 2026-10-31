@@ -391,7 +391,7 @@ const MODS={
 };
 // module abilities: tap the module's slot (keys 1-4 on desktop). cd = seconds, pw = what a power card raises, v = value at power level p
 const AB={
-  cannon:   {name:'Breaker Shell',cd:8, desc:'A huge shell that pierces everything in a line.',pw:'shell damage',   v:(m,p)=>m.dmg*(5+1.5*p)},
+  cannon:   {name:'Main Gun',none:1,cd:0,desc:'No special ability: it just keeps firing.',pw:'',v:()=>0},
   plow:     {name:'Bulldoze',     cd:10,desc:'A shockwave throws enemies in front back and stuns them.',pw:'shockwave reach',v:(m,p)=>170+30*p},
   broadside:{name:'Full Salvo',   cd:9, desc:'A fan of shells from both flanks.',pw:'shells per side',v:(m,p)=>5+p},
   flamer:   {name:'Firewall',     cd:10,desc:'Burning strips on the ground to both sides.',pw:'burn time',v:(m,p)=>4+p,sec:1},
@@ -404,7 +404,7 @@ const AB={
 // mastery: at MASTERY_LVL a module offers a final choice between a passive (p) and an ability (a) capstone
 const MASTERY_LVL=8;
 const MASTERY={
-  cannon:   {p:['Twin Breech','Every volley fires a second time a moment later.'],a:['Siege Shell','Breaker Shell leaves a line of fire behind it.']},
+  cannon:   {p:['Twin Breech','Every volley fires a second time a moment later.'],a:['Sabot Rounds','Shells pierce two more enemies and hit 25% harder.']},
   plow:     {p:['Grinder Teeth','Plow damage +80% and ramming damage +50%.'],a:['Earthquake','Bulldoze hits everything around you, with more reach.']},
   broadside:{p:['Chain Shot','Broadside shells pierce two enemies.'],a:['Rolling Thunder','Full Salvo fires three waves.']},
   flamer:   {p:['Hotter Mix','Flames do 60% more damage and reach 25% further.'],a:['Inferno Ring','Firewall rings the whole tank.']},
@@ -1077,8 +1077,9 @@ function updateModules(dt){
 // aimable abilities fire where the steering stick (or WASD) points, otherwise straight ahead
 function aimDir(def){let ix=joy.dx,iy=joy.dy;if(keys.w||keys.arrowup)iy-=1;if(keys.s||keys.arrowdown)iy+=1;if(keys.a||keys.arrowleft)ix-=1;if(keys.d||keys.arrowright)ix+=1;
   return Math.hypot(ix,iy)>0.3?Math.atan2(iy,ix):def;}
+const abSlots=()=>SLOT_KEYS.filter(k=>{const m=G.p.modules[k];return !(m&&AB[m.id].none);});
 function useAbility(slot){
-  if(mode!=='play')return false;const p=G.p,m=p.modules[slot];if(!m)return false;const A=m.ab;
+  if(mode!=='play')return false;const p=G.p,m=p.modules[slot];if(!m||AB[m.id].none)return false;const A=m.ab;
   if(A.t>0){sfx('click');return false;}
   if(!castAbility(slot)){addText(p.x,p.y-p.r-12,'No target','#c9c2b0');return false;}
   if(m.mastery==='a'&&m.id==='broadside')m.rep={n:2,t:0.25,gap:0.25};
@@ -1089,13 +1090,7 @@ function castAbility(slot){
   const p=G.p,m=p.modules[slot];if(!m)return false;const A=m.ab,MA=m.mastery==='a';
   const v=AB[m.id].v(m,A.pow),ca=Math.cos(p.a),sa=Math.sin(p.a);let ok=true;
   const foes=()=>G.ents.filter(e=>!e.dead&&!e.d.neutral);
-  if(m.id==='cannon'){
-    const ga=aimDir(p.a+p.gunO),cg=Math.cos(ga),sg=Math.sin(ga),px=p.x+ca*p.r*0.15,py=p.y+sa*p.r*0.15;p.gunO=angDiff(p.a,ga);
-    shoot(px+cg*p.r*1.05,py+sg*p.r*1.05,ga,760,v,m.range*1.5,{r:13,pierce:99,col:'#ff8a2a'});
-    if(MA)for(let d=60;d<m.range*1.5;d+=55)G.burns.push({x:px+cg*d,y:py+sg*d,r:24,life:4,max:4,dps:m.dmg*1.5});
-    if(G.burns.length>44)G.burns.splice(0,G.burns.length-44);
-    parts(px+cg*p.r*1.25,py+sg*p.r*1.25,16,'#ffcf6a',300,8,0.3);p.recoil=1;sfx('boom',0.8);
-  }else if(m.id==='plow'){
+  if(m.id==='plow'){
     const dir=aimDir(p.a),reach=MA?v*1.3:v,cd_=Math.cos(dir),sd_=Math.sin(dir);
     for(const e of foes()){const dx=e.x-p.x,dy=e.y-p.y,d=Math.hypot(dx,dy)||1;
       if(d<reach+e.r&&(MA||Math.abs(angDiff(dir,Math.atan2(dy,dx)))<1.1)){hurt(e,m.dmg*3);if(!e.d.stat&&!e.d.boss){e.x+=dx/d*120;e.y+=dy/d*120;e.stun=1.5;}}}
@@ -1312,8 +1307,8 @@ function upgradePool(){
     L.push({t:nm,icon:ic,s:k=>[['damage',r1(m.dmg),r1(m.dmg*(1+0.25*k))]],ap:k=>{m.dmg*=1+0.25*k;m.lvl++;}});
     L.push({t:nm,icon:ic,s:k=>[['reload',s1(m.cd),s1(m.cd/(1+0.15*k))]],ap:k=>{m.cd/=1+0.15*k;m.lvl++;}});
     const A=m.ab,AD=AB[m.id],fv=v=>AD.sec?r1(v)+'s':r1(v);
-    if(A.cd>3)L.push({t:AD.name,icon:ic,s:k=>[['ability cooldown',s1(A.cd),s1(Math.max(3,A.cd/(1+0.15*k)))]],ap:k=>{A.cd=Math.max(3,A.cd/(1+0.15*k));m.lvl++;}});
-    if(A.pow<4)L.push({fix:1,t:AD.name,icon:ic,s:()=>[[AD.pw,fv(AD.v(m,A.pow)),fv(AD.v(m,A.pow+1))]],ap:()=>{A.pow++;m.lvl++;}});
+    if(!AD.none&&A.cd>3)L.push({t:AD.name,icon:ic,s:k=>[['ability cooldown',s1(A.cd),s1(Math.max(3,A.cd/(1+0.15*k)))]],ap:k=>{A.cd=Math.max(3,A.cd/(1+0.15*k));m.lvl++;}});
+    if(!AD.none&&A.pow<4)L.push({fix:1,t:AD.name,icon:ic,s:()=>[[AD.pw,fv(AD.v(m,A.pow)),fv(AD.v(m,A.pow+1))]],ap:()=>{A.pow++;m.lvl++;}});
     if(m.id==='cannon'){
       if(m.shots<4)L.push({fix:1,t:nm,icon:ic,s:()=>[['barrels',m.shots,m.shots+1]],ap:()=>{m.shots++;m.lvl++;}});
       if(m.extra<4)L.push({fix:1,t:nm,icon:ic,s:()=>[['enemies pierced',m.extra-1,m.extra]],ap:()=>{m.extra++;m.lvl++;}});
@@ -1374,11 +1369,12 @@ function afterPick(){
 }
 function openMastery(){
   mode='level';const k=G.mastQ.shift(),m=G.p.modules[k];if(!m){afterPick();return;}const M=MASTERY[m.id];sfx('quest');buzz([20,40,20]);
-  const card=(w,rar)=>({rar,t:M[w][0],icon:m.id,desc:M[w][1],ap:()=>{m.mastery=w;applyMastery(m);}});
+  const card=(w,rar)=>({rar:AB[m.id].none?'mp':rar,t:M[w][0],icon:m.id,desc:M[w][1],ap:()=>{m.mastery=w;applyMastery(m);}});
   showCards(MODS[m.id].name+' mastery','Level '+m.lvl+'. Pick one. This choice is final.',[card('p','mp'),card('a','ma')],c=>{c.ap();hideCards();afterPick();},false);
 }
 function applyMastery(m){ // one-off stat changes; the rest are checked where they happen
   const p=G.p;
+  if(m.mastery==='a'&&m.id==='cannon'){m.extra+=2;m.dmg*=1.25;}
   if(m.mastery==='p'){
     if(m.id==='plow'){m.dmg*=1.8;p.ramDmg*=1.5;}
     if(m.id==='flamer'){m.dmg*=1.6;m.range*=1.25;}
@@ -1517,7 +1513,7 @@ function renderGarage(){
     const c_=document.createElement('span');c_.textContent=n+'/'+cat.items.length+' owned';h.appendChild(c_);mo.appendChild(h);
     cat.items.forEach(it=>{const own=wsOwned(it),open=n>=TIER_NEED[it.tier];
       const d=it.mod&&MODS[it.mod],title=(d?d.name+' ('+SLOT_NAME[d.slot]+')':it.name),tierTag='Tier '+it.tier;
-      let meta=d?d.desc+' Ability: '+AB[it.mod].name+'.':it.desc;
+      let meta=d?d.desc+(AB[it.mod].none?'':' Ability: '+AB[it.mod].name+'.'):it.desc;
       if(it.quest&&!own){const q=MILESTONES.find(m=>m.id===QUEST_MODS[it.mod]);meta='Milestone reward: '+q.t.toLowerCase()+'.';}
       else if(!open&&!own)meta='Opens after '+TIER_NEED[it.tier]+' '+cat.name+' item'+(TIER_NEED[it.tier]>1?'s':'')+'. '+meta;
       mo.appendChild(row(title,meta,{locked:!own,tag:own?'Owned':(it.quest?'Quest':!open?tierTag:null),price:own||it.quest||!open?null:it.cost,
@@ -1569,7 +1565,7 @@ cvs.addEventListener('pointermove',e=>{
 });
 const endJoy=e=>{if(e.pointerId===joy.id)releaseJoy();};
 cvs.addEventListener('pointerup',endJoy);cvs.addEventListener('pointercancel',endJoy);
-addEventListener('keydown',e=>{keys[e.key.toLowerCase()]=true;if(e.key>='1'&&e.key<='4'&&G&&!e.repeat)useAbility(SLOT_KEYS[+e.key-1]);if(e.key===' '){tryNitro();e.preventDefault();}if(e.key==='Escape'){mode==='play'?pauseGame():null;}});
+addEventListener('keydown',e=>{keys[e.key.toLowerCase()]=true;if(e.key>='1'&&e.key<='4'&&G&&!e.repeat){const k=abSlots()[+e.key-1];if(k)useAbility(k);}if(e.key===' '){tryNitro();e.preventDefault();}if(e.key==='Escape'){mode==='play'?pauseGame():null;}});
 addEventListener('keyup',e=>{keys[e.key.toLowerCase()]=false;});
 function tryNitro(){const p=G&&G.p;if(!p||mode!=='play')return;if(p.nitroCd<=0){p.nitro=1.6;if(hasArt('shockboost'))explode(p.x,p.y,110,25*p.wdm,false,true);p.nitroCd=p.nitroMax;G.shake+=3;sfx('nitro');buzz(15);}}
 $('#nitro').addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();tryNitro();});
@@ -2277,22 +2273,22 @@ function tankMesh3D(S,M){
   if(b&&b.id==='mines'){add(root,{g:'box',s:[.06,.46,.8],p:[bx+.14,my,0],c:IRON});
     for(const z of [-.2,.2]){for(let k=0;k<3;k++)add(root,{g:'cyl',s:[.32,.1,.32],p:[bx-.03,my-.15+k*.14,z],c:'#e8ad2c'});add(root,{g:'cyl',s:[.1,.04,.1],p:[bx-.03,my+.15,z],c:'#1d1a12'});}}
   if(b&&b.id==='layer'){add(root,{g:'box',s:[.4,.4,.8],p:[bx,my,0],c:'#5d6b4a'});add(root,{g:'cyl8',s:[.36,.16,.36],p:[bx,my+.28,0],c:'#c9b48a'});add(root,{g:'box',s:[.36,.08,.08],p:[bx-.24,my+.33,0],c:GUN});}
-  if(b&&b.id==='drone'){const dx=bx+.02,dy=Y+.04;add(root,{g:'box',s:[.56,.05,.56],p:[dx,dy,0],c:'#2a3240'});
-    for(const ra of [Math.PI/4,-Math.PI/4])add(root,{g:'box',s:[.44,.012,.05],p:[dx,dy+.03,0],r:[0,ra,0],c:'#e8ad2c'});
-    add(root,{g:'box',s:[.15,.07,.15],p:[dx,dy+.1,0],c:GUN}); // parked quadcopter
-    for(const ra of [Math.PI/4,-Math.PI/4])add(root,{g:'box',s:[.44,.03,.04],p:[dx,dy+.11,0],r:[0,ra,0],c:GUN});
-    for(const [ox,oz] of [[.155,.155],[.155,-.155],[-.155,.155],[-.155,-.155]])add(root,{g:'cyl',s:[.17,.015,.17],p:[dx+ox,dy+.14,oz],c:'#9fe0ff',op:.6});}
+  if(b&&b.id==='drone'){const ax=xb+.14,az=-(hw/2-.12); // drone control antenna: radio box, mast, whip, beacon
+    add(root,{g:'box',s:[.2,.14,.16],p:[ax,Y+.07,az],c:'#4f5a36'});add(root,{g:'cyl',s:[.06,.12,.06],p:[ax,Y+.2,az],c:IRON});
+    add(root,{g:'cyl',s:[.025,1.1,.025],p:[ax,Y+.81,az],c:'#2a2624'});add(root,{g:'box',s:[.03,.03,.22],p:[ax,Y+1.05,az],c:'#2a2624'});
+    add(root,{g:'sph',s:[.07,.07,.07],p:[ax,Y+1.38,az],c:'#9fe0ff',glow:1});}
   // the top module sits on the deck behind the turret (in front of it when the turret is at the back)
-  top.position.set(S.eng==='f'?xf-.25:xb+.42,Y+.01,0);root.add(top);
-  const t=M.top;
-  if(t&&t.id==='turret'){const n=t.shots,gw=(n-1)*.11;
-    add(top,{g:'cyl8',s:[.56,.22,.56],p:[0,.11,0],c:C});add(top,{g:'cyl',s:[.4,.05,.4],p:[-.04,.24,0],c:IRON});
-    add(top,{g:'box',s:[.05,.26,.05],p:[.08,.36,0],c:IRON});add(top,{g:'box',s:[.05,.22,.3+gw],p:[.24,.5,0],c:'#55604a'});
-    for(let i=0;i<n;i++){const z=(i-(n-1)/2)*.11;add(top,{g:'box',s:[.26,.09,.07],p:[.1,.5,z],c:GUN});add(top,{g:'cyl',s:[.04,.55,.04],p:[.48,.51,z],r:[0,0,HALF],c:GUN});}
-    add(top,{g:'box',s:[.12,.1,.1],p:[.06,.44,-(gw/2+.1)],c:'#4f5a36'});}
-  else if(t&&t.id==='tesla'){add(top,{g:'cyl',s:[.66,.28,.66],p:[0,.14,0],c:'#2a3240'});add(top,{g:'torusF',s:[.6,.6,.6],p:[0,.4,0],c:'#8fd8ff',glow:1});add(top,{g:'sph',s:[.26,.26,.26],p:[0,.48,0],c:'#d6f3ff',glow:1});}
+  const t=M.top,mg=t&&t.id==='turret';
+  if(mg){const cx=-tr*.3,cz=tr*.35,n=t.shots,gw=(n-1)*.1;
+    if(!S.cu)add(turret,{g:'cyl',s:[.24,.13,.24],p:[cx,Y+tH+.04,cz],c:IRON});
+    top.position.set(cx,Y+tH+.1,cz);turret.add(top);
+    add(top,{g:'box',s:[.04,.2,.04],p:[0,.1,0],c:IRON});add(top,{g:'box',s:[.04,.18,.26+gw],p:[.14,.24,0],c:'#55604a'});
+    for(let i=0;i<n;i++){const z=(i-(n-1)/2)*.1;add(top,{g:'box',s:[.22,.08,.06],p:[.02,.24,z],c:GUN});add(top,{g:'cyl',s:[.035,.5,.035],p:[.37,.25,z],r:[0,0,HALF],c:GUN});}
+    add(top,{g:'box',s:[.1,.09,.09],p:[-.02,.18,-(gw/2+.09)],c:'#4f5a36'});}
+  else{top.position.set(S.eng==='f'?xf-.25:xb+.42,Y+.01,0);root.add(top);}
+  if(t&&t.id==='tesla'){add(top,{g:'cyl',s:[.66,.28,.66],p:[0,.14,0],c:'#2a3240'});add(top,{g:'torusF',s:[.6,.6,.6],p:[0,.4,0],c:'#8fd8ff',glow:1});add(top,{g:'sph',s:[.26,.26,.26],p:[0,.48,0],c:'#d6f3ff',glow:1});}
   const flame=add(root,{g:'cone',s:[.5,.8,.5],p:[-L/2-.35,my,0],r:[0,0,HALF],c:'#ff9b2e',glow:1});flame.visible=false;
-  return {root,top,barrels,turret:gun?turret:null,hull,flame,stacks};
+  return {root,top,barrels,turret:gun?turret:null,hull,flame,stacks,topOnTurret:mg};
 }
 function buildPlayer3D(p){
   if(R3.player){R3.scene.remove(R3.player.root);R3.player.root.traverse(o=>{if(o.material)o.material.dispose();});}
@@ -2335,7 +2331,7 @@ function render3D(){
   if(key!==R3.key){R3.key=key;buildPlayer3D(p);}
   const P=R3.player,ch=p.chomp||0;
   P.root.position.set(p.x,0,p.y);P.root.rotation.y=-p.a;P.root.scale.set(p.r*(1+ch*.1),p.r*(1-ch*.08),p.r*(1+ch*.1));
-  P.top.rotation.y=-(p.turA-p.a);const go=p.gunO,rk_=(p.recoil||0)*0.3;
+  P.top.rotation.y=-(p.turA-p.a-(P.topOnTurret&&P.turret?p.gunO:0));const go=p.gunO,rk_=(p.recoil||0)*0.3;
   if(P.turret){P.turret.rotation.y=-go;P.barrels.position.set(-rk_,0,0);}
   P.hull.material.color.set(p.hurt>0?'#fff6e6':R3.hullCol||'#b8966a');
   P.flame.visible=p.nitro>0;if(p.nitro>0)P.flame.scale.set(.5,.7+Math.random()*.5,.5);
@@ -2506,7 +2502,7 @@ function updateHUD(){
   const ak=G.arts.join();if(hudCache.arts!==ak){hudCache.arts=ak;const el=$('#arts');el.innerHTML='';G.arts.forEach(id=>{const sp=document.createElement('span');sp.title=ARTIFACTS[id].name;sp.innerHTML=svgIcon(ARTIFACTS[id].icon);el.appendChild(sp);});}
   const sk=['front','side','back','top'].map(k=>{const m=p.modules[k];return m?m.id+m.lvl+(m.mastery||''):'-';}).join();
   if(hudCache.slots!==sk){hudCache.slots=sk;hud.slots.innerHTML='';hud.slotEl={};
-    [['front','Front'],['side','Sides'],['back','Rear'],['top','Top']].forEach(([k,lab])=>{const m=p.modules[k];const d=document.createElement(m?'button':'div');d.className='slot'+(m?' on':'')+(m&&m.mastery?' mastered':'');
+    const show=abSlots();[['front','Front'],['side','Sides'],['back','Rear'],['top','Top']].filter(([k])=>show.includes(k)).forEach(([k,lab])=>{const m=p.modules[k];const d=document.createElement(m?'button':'div');d.className='slot'+(m?' on':'')+(m&&m.mastery?' mastered':'');
       if(m){d.innerHTML=svgIcon(m.id);d.setAttribute('aria-label',AB[m.id].name);const c=document.createElement('i');c.className='cool';const b=document.createElement('b');b.textContent=m.lvl;d.append(c,b);
         d.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();useAbility(k);});hud.slotEl[k]=d;delete hudCache['cd'+k];}
       else{const e=document.createElement('em');e.textContent=lab;d.appendChild(e);}
