@@ -86,7 +86,7 @@ run('iron','lou',true);run('ash','ida',true);run('ash','sid',false);run('iron','
 // --- module abilities: every one fires, goes on cooldown, and its cards apply ---
 {api.SAVE.selMap='dust';api.startRun();const G=api.G,P=G.p;
  for(let i=0;i<60*25;i++){if(api.mode==='play'){api.joy.dx=1;api.joy.dy=0.3;api.update(1/60);P.hp=P.maxHp;}else api.pick(0);}
- const slotOf={cannon:'front',plow:'front',broadside:'side',flamer:'side',mines:'back',drone:'back',layer:'back',turret:'top',tesla:'top'};
+ const slotOf=Object.fromEntries(Object.entries(api.MODS).map(([k,d])=>[k,d.slot]));
  api.setMode('play');assert.ok(!api.useAbility('front')&&!api.upgradePool().some(c=>c.t==='Main Gun'&&/ability/.test(JSON.stringify(c.s(1)))),'Main Gun has no ability');
  for(const id in api.AB){if(api.AB[id].none)continue;
    api.setMode('play');const slot=slotOf[id];P.modules[slot]=api.mkMod(id,P.wdm);
@@ -272,7 +272,7 @@ run('iron','lou',true);run('ash','ida',true);run('ash','sid',false);run('iron','
  // The Caldera: vents shield it; meteor showers and lava rings
  let C=reset(4);assert.strictEqual(C.type,'caldera');let sawWave=false,sawStrike=false;tick(60*9,()=>{if(G.waves.length)sawWave=true;if(G.strikes.length)sawStrike=true;});
  assert.ok(C.vents.length===4&&sawWave&&sawStrike,'caldera vents, rings and meteors');
- const ch=C.hp;api.hurt(C,400);assert.ok(Math.abs((ch-C.hp)-100)<1,'four vents block 75%');C.vents.forEach(v=>api.hurt(v,1e9));api.update(1/60);
+ const alive=C.vents.filter(v=>!v.dead).length,ch=C.hp;api.hurt(C,400);assert.ok(alive>0&&Math.abs((ch-C.hp)-400*(1-alive/4*0.75))<1,'each living vent blocks 18.75% ('+alive+' alive)');C.vents.forEach(v=>api.hurt(v,1e9));api.update(1/60);
  const ch2=C.hp;api.hurt(C,400);assert.ok(Math.abs((ch2-C.hp)-400)<1,'no vents, full damage');
  // Obsidian Spire: warning line, then a sweeping beam that hurts
  api.setMode('play');G.ents=G.ents.filter(e=>e.d.neutral);G.boss=null;G.bossSpawned=true;api.joy.dx=api.joy.dy=0;P.v=0;
@@ -282,7 +282,7 @@ run('iron','lou',true);run('ash','ida',true);run('ash','sid',false);run('iron','
  console.log('ashlands ok: wyrm, prophet, twin kilns, caldera');api.setMode('play');api.endRun('quit');}
 // --- mastery: at level 8 every module offers a passive or ability capstone, and each one works ---
 {api.SAVE.selMap='dust';api.startRun();const G=api.G,P=G.p;
- const slotOf={cannon:'front',plow:'front',broadside:'side',flamer:'side',mines:'back',drone:'back',layer:'back',turret:'top',tesla:'top'};
+ const slotOf=Object.fromEntries(Object.entries(api.MODS).map(([k,d])=>[k,d.slot]));
  const dummy=(x,y)=>{const e={type:'tank',d:{hp:1e6,r:16,spd:0,stat:1,contact:0},hp:1e6,max:1e6,r:16,a:0,ta:0,t:99,slow:0,hit:0,flash:0,dead:false,st:'walk',pt:2,spin:0,t2:0,t3:0,x,y};G.ents.push(e);return e;};
  const res={};
  api.MODS_CD_TURRET=api.mkMod('turret',1).cd;
