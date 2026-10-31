@@ -308,7 +308,7 @@ button:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
         <h3>Daily quests</h3><p class="note" id="dailyNote"></p><div id="dailyList"></div>
         <h3>Battlefield</h3><p class="note">Clear all four bosses in one run to unlock the next one.</p><div id="mapList"></div>
         <h3>Captain</h3><p class="note">Each captain has a perk and a drawback.</p><div id="capList"></div>
-        <h3>Crew</h3><p class="note">One crew member rides along: a perk, no drawback.</p><div id="crewList"></div>
+        <h3>Crew</h3><p class="note">One crew rides along: a perk, or a team that fights on its own.</p><div id="crewList"></div>
         <h3>Chassis</h3><p class="note">The tank body you roll out in.</p><div id="chassisList"></div>
         </div><div class="gcol">
         <h3>Workshop</h3><p class="note">You always have Main Gun, Broadside, Mine Dropper and Auto Turret. Buying anything in a category opens its next tier.</p><div id="modList"></div>
@@ -545,6 +545,11 @@ const CREW=[
   {id:'spotter',name:'Spotter',perk:'+15% weapon range.',cost:350},
   {id:'cook',name:'Cook',perk:'Health crates heal 30% more.',cost:300},
   {id:'scrounger',name:'Scrounger',perk:'+15% gold from everything.',cost:400},
+  {id:'riflemen',name:'Riflemen',perk:'Two soldiers on the deck snipe the closest enemy.',cost:600,fight:1},
+  {id:'mortar',name:'Mortar Team',perk:'Every 4 seconds, a shell lands on the thickest group of enemies and leaves the ground burning.',cost:1000,fight:1},
+  {id:'bazooka',name:'Bazooka Team',perk:'Every 3 seconds, a rocket at the nearest vehicle. Double damage to tanks and heavies.',cost:1200,fight:1},
+  {id:'marksman',name:'Marksman',perk:'Every 2.5 seconds, a long-range shot at the toughest enemy, bosses first.',cost:1500,fight:1},
+  {id:'radio',name:'Radio Operator',perk:'Every 20 seconds, calls an artillery barrage onto the boss or the biggest crowd.',cost:0,fight:1,quest:'m_tanks'},
 ];
 const CHASSIS=[
   {id:'standard',name:'Standard',perk:'Balanced hull.',cost:0,ap:p=>{}},
@@ -651,6 +656,7 @@ const MILESTONES=[
   {id:'m_level',   m:'level',     n:20,run:1, t:'Reach level 20 in one run',silver:250},
   {id:'m_kills',   m:'kills',     n:2500,     t:'Destroy 2,500 enemies',silver:300},
   {id:'m_ash',     m:'clear:ash', n:1,run:1,  t:'Clear Ashlands',silver:500},
+  {id:'m_tanks',   m:'tanks',     n:100,      t:'Destroy 100 tanks in total',crew:'radio'},
 ];
 DAILY.forEach(q=>q.daily=1);
 function loadSave(){const s=store.get();s.silver=s.silver||0;s.mods=s.mods||[];s.caps=s.caps||['sarge'];s.maps=s.maps||['dust'];
@@ -693,7 +699,7 @@ function foldRun(R,date){ // add a finished run into stored progress
   const f=q=>{const S=qStore(q),v=qRunVal(q,R);S.prog[q.id]=q.run?Math.max(S.prog[q.id]||0,v):(S.prog[q.id]||0)+v;};
   MILESTONES.forEach(f);if(SAVE.daily.date===date)activeDaily().forEach(f);
 }
-function grant(q){if(q.silver)SAVE.silver+=q.silver;if(q.mod&&!SAVE.mods.includes(q.mod))SAVE.mods.push(q.mod);}
+function grant(q){if(q.silver)SAVE.silver+=q.silver;if(q.mod&&!SAVE.mods.includes(q.mod))SAVE.mods.push(q.mod);if(q.crew&&!SAVE.crew.includes(q.crew))SAVE.crew.push(q.crew);}
 function checkQuests(live){
   const R=runStats(),got=[];
   for(const q of activeQuests()){const S=qStore(q);if(S.done[q.id])continue;
@@ -701,7 +707,8 @@ function checkQuests(live){
   if(got.length){persist();if(G&&G.rs&&G.rs.on)G.qDone.push(...got);if(live)got.forEach(q=>{toastQ.push(q);if(toastQ.length===1)showToast();});}
   return got;
 }
-const qReward=q=>q.mod?'Unlocks '+MODS[q.mod].name:'+'+q.silver+' silver';
+const qUnlock=q=>q.mod?MODS[q.mod].name:q.crew?CREW.find(c=>c.id===q.crew).name:'';
+const qReward=q=>qUnlock(q)?'Unlocks '+qUnlock(q):'+'+q.silver+' silver';
 const qFmt=(q,v)=>q.m==='time'?mmss(v):String(Math.floor(v));
 const toastQ=[];
 function showToast(){
@@ -985,6 +992,35 @@ function shoot(x,y,a,spd,dmg,range,opt){
 function eshoot(x,y,a,spd,dmg,r,col){
   if(G.eb.length>260)return;
   G.eb.push({x,y,vx:Math.cos(a)*spd,vy:Math.sin(a)*spd,dmg,r:r||5,life:2.6,col:col||'#fff6e0'});
+}
+
+/* ---------- fighting crews ---------- */
+// crews ride on the deck and attack on their own; their damage follows weapon damage and the stage, so they keep up
+function crowdAt(range){ // the enemy with the most others around it (the boss when there is one)
+  const p=G.p;if(G.boss&&!G.boss.hidden&&Math.hypot(G.boss.x-p.x,G.boss.y-p.y)<range)return G.boss;
+  let best=null,bn=-1;for(const e of G.ents){if(e.dead||e.d.neutral||e.hidden||Math.hypot(e.x-p.x,e.y-p.y)>range)continue;
+    let n=0;for(const o of G.ents)if(!o.dead&&!o.d.neutral&&Math.abs(o.x-e.x)<90&&Math.abs(o.y-e.y)<90)n++;if(n>bn){bn=n;best=e;}}
+  return best;
+}
+function updateCrew(dt){
+  const p=G.p,c=G.crew;if(!G.shells)G.shells=[];
+  for(const sh of G.shells){sh.t-=dt;if(sh.t<=0){explode(sh.x,sh.y,sh.r,sh.dmg,false,true);if(sh.burn){G.burns.push({x:sh.x,y:sh.y,r:46,life:2.5,max:2.5,dps:sh.burn});if(G.burns.length>44)G.burns.shift();}}}
+  G.shells=G.shells.filter(sh=>sh.t>0);
+  const C=CREW.find(x=>x.id===c);if(!C||!C.fight)return;
+  G.crewT=(G.crewT||0)-dt;if(G.crewT>0)return;
+  const pw=p.wdm*(1+0.4*(G.stage-1)),aim=e=>Math.atan2(e.y-p.y,e.x-p.x);
+  if(c==='riflemen'){const e=nearest(p.x,p.y,360);if(!e){G.crewT=0.2;return;}G.crewT=0.45;
+    shoot(p.x,p.y,aim(e)+rnd(-0.04,0.04),700,6*pw,380,{r:4,col:'#fff2b0'});sfx('pew');}
+  else if(c==='mortar'){const e=crowdAt(520);if(!e){G.crewT=0.3;return;}G.crewT=4;
+    G.shells.push({x:e.x,y:e.y,t:0.9,r:78,dmg:32*pw,burn:7*pw});smoke(p.x,p.y,2,20);sfx('cannon');}
+  else if(c==='bazooka'){const e=nearest(p.x,p.y,440,o=>HANK_V.includes(o.d.base||o.type))||nearest(p.x,p.y,440);if(!e){G.crewT=0.3;return;}G.crewT=3;
+    const heavy=['tank','heavy'].includes(e.d.base||e.type)||e.d.boss;shoot(p.x,p.y,aim(e),560,26*pw*(heavy?2:1),480,{r:8,col:'#ff8a2a'});smoke(p.x,p.y,2,16);sfx('boom',0.5);}
+  else if(c==='marksman'){let e=G.boss&&!G.boss.hidden&&Math.hypot(G.boss.x-p.x,G.boss.y-p.y)<700?G.boss:null;
+    if(!e){let hp=0;for(const o of G.ents){if(o.dead||o.d.neutral||o.hidden||Math.hypot(o.x-p.x,o.y-p.y)>650)continue;if(o.hp>hp){hp=o.hp;e=o;}}}
+    if(!e){G.crewT=0.3;return;}G.crewT=2.5;shoot(p.x,p.y,aim(e),1300,48*pw,720,{r:4,col:'#e8f4ff'});sfx('cannon');}
+  else if(c==='radio'){const e=crowdAt(720);if(!e){G.crewT=0.5;return;}G.crewT=20;
+    for(let i=0;i<6;i++)G.shells.push({x:e.x+rnd(-70,70),y:e.y+rnd(-70,70),t:1.2+i*0.25,r:72,dmg:42*pw});
+    addText(p.x,p.y-p.r-14,'Artillery inbound!','#ffd25a');banner('','Artillery inbound!');sfx('alarm');}
 }
 
 /* ---------- player modules ---------- */
@@ -1469,7 +1505,7 @@ function endRun(won){
   const qd=$('#overQuests');qd.innerHTML='';const h=document.createElement('h4');h.textContent='Quests completed';qd.appendChild(h);
   if(!G.qDone.length){const e_=document.createElement('p');e_.textContent='None this run. Check the garage for today\'s quests.';qd.appendChild(e_);}
   G.qDone.forEach(q=>{const d=document.createElement('div');const a_=document.createElement('span');a_.textContent=q.t;
-    const b_=document.createElement('b');b_.textContent=qReward(q);if(q.mod)b_.className='mod';d.append(a_,b_);qd.appendChild(d);});
+    const b_=document.createElement('b');b_.textContent=qReward(q);if(qUnlock(q))b_.className='mod';d.append(a_,b_);qd.appendChild(d);});
   setTimeout(()=>$('#over').classList.add('show'),won?600:quit?0:900);
 }
 function showTitle(){
@@ -1507,8 +1543,8 @@ function renderGarage(){
     ml.appendChild(row(m.name,open?m.desc:'Locked. Clear '+(req?req.name:'')+' to unlock.',{sel:SAVE.selMap===m.id,locked:!open,tag:SAVE.cleared[m.id]?'Cleared':null,
       onSel:open?()=>{SAVE.selMap=m.id;persist();renderGarage();}:null}));});
   const crl=$('#crewList');crl.innerHTML='';
-  CREW.forEach(c=>{const own=!c.id||SAVE.crew.includes(c.id);
-    crl.appendChild(row(c.name,c.perk,{sel:SAVE.selCrew===c.id,locked:!own,price:own?null:c.cost,
+  CREW.forEach(c=>{const own=!c.id||SAVE.crew.includes(c.id),q=c.quest&&!own&&MILESTONES.find(m=>m.id===c.quest);
+    crl.appendChild(row(c.name,q?'Milestone reward: '+q.t.toLowerCase()+'. '+c.perk:c.perk,{sel:SAVE.selCrew===c.id,locked:!own,price:own||q?null:c.cost,tag:q?'Quest':null,
       onSel:own?()=>{SAVE.selCrew=c.id;persist();renderGarage();}:null,
       onBuy:()=>{SAVE.silver-=c.cost;SAVE.crew.push(c.id);SAVE.selCrew=c.id;persist();renderGarage();}}));});
   const chl=$('#chassisList');chl.innerHTML='';
@@ -1547,7 +1583,7 @@ function questRow(q){
   const m=document.createElement('span');m.className='meta';m.textContent=qFmt(q,v)+' / '+qFmt(q,q.n)+(q.run&&!q.m.startsWith('clear:')?' best run':'');
   t.append(b,bar,m);el.appendChild(t);
   const r=document.createElement('span');
-  if(done){r.className='tag';r.textContent='Done';}else{r.className='rew'+(q.mod?' mod':'');r.textContent=q.mod?MODS[q.mod].name:'+'+q.silver;}
+  if(done){r.className='tag';r.textContent='Done';}else{r.className='rew'+(qUnlock(q)?' mod':'');r.textContent=qUnlock(q)||'+'+q.silver;}
   el.appendChild(r);
   return el;
 }
@@ -1648,7 +1684,7 @@ function update(dt){
     const a=Math.random()*TAU,r=spawnDist(a);addEnt(type,p.x+Math.cos(a)*r,p.y+Math.sin(a)*r);
     banner('',type==='magnetcart'?'A magnet cart is nearby. Destroy it!':'A repair cart is nearby. Destroy it!');}
 
-  updateModules(dt);
+  updateModules(dt);updateCrew(dt);
 
   // entities
   const vr=viewR()+900;
@@ -2233,7 +2269,7 @@ function meshFrom(def,T){
   m.castShadow=!def.glow;if(def.name)m.name=def.name;return m;
 }
 // one tank from its TANKS shape settings plus the fitted modules. x forward, z sideways, about 2.3 long (the group is scaled by the hull radius)
-function tankMesh3D(S,M){
+function tankMesh3D(S,M,crew){
   const T=R3.T,root=new T.Group(),top=new T.Group(),barrels=new T.Group(),turret=new T.Group();
   const add=(par,def)=>{const m=meshFrom(def,T);par.add(m);return m;};
   const L=S.L||2.3,W=S.W||1,th=S.th||.5,hw=S.hw||1.7,hh=S.hh||.4,gl=S.gl||.4,C=S.c,IRON='#3d3530',GUN='#3d4552';
@@ -2304,13 +2340,24 @@ function tankMesh3D(S,M){
     add(top,{g:'box',s:[.1,.09,.09],p:[-.02,.18,-(gw/2+.09)],c:'#4f5a36'});}
   else{top.position.set(S.eng==='f'?xf-.25:xb+.42,Y+.01,0);root.add(top);}
   if(t&&t.id==='tesla'){add(top,{g:'cyl',s:[.66,.28,.66],p:[0,.14,0],c:'#2a3240'});add(top,{g:'torusF',s:[.6,.6,.6],p:[0,.4,0],c:'#8fd8ff',glow:1});add(top,{g:'sph',s:[.26,.26,.26],p:[0,.48,0],c:'#d6f3ff',glow:1});}
+  // fighting crews ride on the deck (beside the engine, away from the drone antenna), in a group so they read at any scale
+  const CR=CREW.find(x=>x.id===crew);
+  if(CR&&CR.fight){const cg=new T.Group();cg.position.set(S.eng==='f'?xf-.25:xb+.32,Y,hw/2-.22);cg.scale.set(1.7,1.7,1.7);root.add(cg);
+    const KH='#b59b6a',HEL='#3e4a30',SKIN='#e8c9a0',WOOD='#4a3a2a';
+    const man=(x,z)=>{add(cg,{g:'cyl8',s:[.16,.26,.16],p:[x,.13,z],c:KH});add(cg,{g:'sph',s:[.12,.12,.12],p:[x,.32,z],c:SKIN});add(cg,{g:'sph',s:[.16,.08,.16],p:[x,.37,z],c:HEL});};
+    if(crew==='riflemen')for(const [x,z] of [[0,0],[-.2,-.14]]){man(x,z);add(cg,{g:'box',s:[.32,.03,.03],p:[x+.1,.22,z-.08],c:WOOD});}
+    if(crew==='mortar'){man(-.14,0);add(cg,{g:'box',s:[.16,.02,.16],p:[.06,.01,-.12],c:IRON});add(cg,{g:'cyl',s:[.09,.34,.09],p:[.1,.16,-.12],r:[0,0,-.5],c:GUN});}
+    if(crew==='bazooka'){man(0,0);add(cg,{g:'cyl',s:[.07,.5,.07],p:[.05,.3,-.09],r:[0,0,HALF],c:'#55604a'});}
+    if(crew==='marksman'){man(0,0);add(cg,{g:'box',s:[.48,.03,.03],p:[.16,.23,-.08],c:WOOD});add(cg,{g:'cyl',s:[.04,.12,.04],p:[.12,.27,-.08],r:[0,0,HALF],c:IRON});}
+    if(crew==='radio'){man(0,0);add(cg,{g:'box',s:[.12,.16,.14],p:[-.11,.18,0],c:'#4f5a36'});add(cg,{g:'cyl',s:[.015,.5,.015],p:[-.13,.5,.03],c:'#2a2624'});}
+  }
   const flame=add(root,{g:'cone',s:[.5,.8,.5],p:[-L/2-.35,my,0],r:[0,0,HALF],c:'#ff9b2e',glow:1});flame.visible=false;
   return {root,top,barrels,turret:gun?turret:null,hull,flame,stacks,topOnTurret:mg};
 }
 function buildPlayer3D(p){
   if(R3.player){R3.scene.remove(R3.player.root);R3.player.root.traverse(o=>{if(o.material)o.material.dispose();});}
   const S=TANKS[tankId(p)];R3.hullCol=S.c;
-  R3.player=tankMesh3D(S,p.modules);R3.scene.add(R3.player.root);
+  R3.player=tankMesh3D(S,p.modules,G.crew);R3.scene.add(R3.player.root);
 }
 function buildBoss3D(e){
   const T=R3.T;
@@ -2344,7 +2391,7 @@ function render3D(){
   const vr=Math.hypot(vs.w/2,vs.h/2/Math.sin(PITCH))+160;
   const near=o=>Math.abs(o.x-tx)<vr&&Math.abs(o.y-tz)<vr;
   // player
-  const key=Object.values(p.modules).map(m=>m?m.id+m.shots:'-').join()+tankId(p);
+  const key=Object.values(p.modules).map(m=>m?m.id+m.shots:'-').join()+tankId(p)+G.crew;
   if(key!==R3.key){R3.key=key;buildPlayer3D(p);}
   const P=R3.player,ch=p.chomp||0;
   P.root.position.set(p.x,0,p.y);P.root.rotation.y=-p.a;P.root.scale.set(p.r*(1+ch*.1),p.r*(1-ch*.08),p.r*(1+ch*.1));
