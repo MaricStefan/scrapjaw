@@ -216,6 +216,7 @@ run('iron','lou',true);run('ash','ida',true);run('ash','sid',false);run('iron','
  api.useAbility('back');assert.strictEqual(G.allies.filter(a=>a.kind==='escort').length,2,'Call Support adds one');
  for(let i=0;i<60;i++)api.update(1/60);api.render();
  G.allies=[];P.modules.side=null;P.modules.back=null;P.modules.top=api.mkMod('missiles');P.modules.top.t=0;d1.dead=true;
+ G.ents=G.ents.filter(e=>e.d.neutral);for(const e of G.ents)e.garrison=false; // no garrison soldiers in the missile path
  const d2=dummy(P.x,P.y+260);for(let i=0;i<60*2;i++){P.v=0;api.update(1/60);P.hp=P.maxHp;}
  assert.ok(d2.hp<1e6,'missile reaches its target');
  P.modules.top=null;d2.dead=true;P.modules.front=api.mkMod('water');const d3=api.addEnt('grunt',P.x+150,P.y);d3.hp=d3.max=1e6;d3.d=Object.assign({},d3.d,{spd:0,shoot:null});
