@@ -32,6 +32,9 @@ Mobile-first 3D tank roguelike in ONE file: `index.html` (inline CSS and JS, ins
 - `render2D()` is the fallback if WebGL or three.js fails.
 - `HUD`: `updateHUD()`.
 
+## Google Play
+- `store/` holds everything for the Play Store release as a Trusted Web Activity (package `com.koderium.scrapjaw`, hosted on GitHub Pages at `maricstefan.github.io/scrapjaw/`): listing texts, Play form answers, Bubblewrap config, the Digital Asset Links template and the release checklist (`store/README.md`). `privacy.html` is the privacy policy. `py -3 store/make_graphics.py` regenerates the PNG icons in `icons/` (the manifest lists them after the in-code SVGs) and the store graphics. If the game ever adds ads, accounts, online scores or purchases, update `store/forms.md` and `privacy.html`.
+
 ## Testing
 - `npm install && npm test` runs `tests/smoke.js`. It plays several full runs on all maps with stubbed DOM and WebGL, using real three.js math. It must finish without exceptions.
 - `python3 tests/screenshots.py` (on Windows: `py -3 tests/screenshots.py`) takes real headless-Chromium screenshots into `shots/`. Look at them after any visual change.

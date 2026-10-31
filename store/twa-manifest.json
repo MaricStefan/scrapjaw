@@ -1,0 +1,38 @@
+{
+  "packageId": "com.koderium.scrapjaw",
+  "host": "maricstefan.github.io",
+  "name": "Scrapjaw",
+  "launcherName": "Scrapjaw",
+  "display": "fullscreen",
+  "orientation": "landscape",
+  "themeColor": "#1e1922",
+  "navigationColor": "#1e1922",
+  "navigationColorDark": "#1e1922",
+  "navigationDividerColor": "#1e1922",
+  "navigationDividerColorDark": "#1e1922",
+  "backgroundColor": "#1e1922",
+  "enableNotifications": false,
+  "startUrl": "/scrapjaw/",
+  "iconUrl": "https://maricstefan.github.io/scrapjaw/icons/icon-512.png",
+  "maskableIconUrl": "https://maricstefan.github.io/scrapjaw/icons/maskable-512.png",
+  "splashScreenFadeOutDuration": 300,
+  "signingKey": {
+    "path": "./android.keystore",
+    "alias": "scrapjaw"
+  },
+  "appVersionName": "1.0.0",
+  "appVersionCode": 1,
+  "shortcuts": [],
+  "generatorApp": "bubblewrap-cli",
+  "webManifestUrl": "https://maricstefan.github.io/scrapjaw/manifest.webmanifest",
+  "fallbackType": "customtabs",
+  "features": {},
+  "alphaDependencies": {
+    "enabled": false
+  },
+  "enableSiteSettingsShortcut": false,
+  "isChromeOSOnly": false,
+  "isMetaQuest": false,
+  "fullScopeUrl": "https://maricstefan.github.io/scrapjaw/",
+  "minSdkVersion": 21
+}

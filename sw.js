@@ -1,8 +1,8 @@
 // Scrapjaw service worker: lets the game install and run offline.
 // The game page is network-first (updates arrive when online); the pinned three.js and the fonts are cache-first.
 // Bump VERSION when this file's caching rules change.
-const VERSION='scrapjaw-v1';
-const CORE=['./','./index.html','./manifest.webmanifest','https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js'];
+const VERSION='scrapjaw-v2';
+const CORE=['./','./index.html','./manifest.webmanifest','./icons/icon-192.png','./icons/icon-512.png','./icons/maskable-512.png','https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js'];
 
 self.addEventListener('install',e=>{
   e.waitUntil(caches.open(VERSION).then(c=>c.addAll(CORE.map(u=>new Request(u,{mode:u.startsWith('http')?'cors':'same-origin'})))).then(()=>self.skipWaiting()));
