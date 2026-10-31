@@ -175,8 +175,7 @@ button:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
 .price{flex:none;border:3px solid var(--line);border-radius:6px;padding:6px 10px;font-weight:700;background:var(--gold);color:#2b2416;font-size:17px}
 .price:disabled{background:transparent;color:var(--muted);border-color:#4a4052}
 .gfoot{padding:10px 16px 14px;border-top:3px solid #3d3446}
-.wscat{display:flex;justify-content:space-between;align-items:baseline;margin:14px 0 0;font-size:18px;color:var(--ink);border-bottom:2px solid #3d3446;padding-bottom:2px}
-.wscat span{font-size:15px;color:var(--muted);font-weight:600}
+.more{display:block;width:100%;margin-top:6px;padding:7px 12px;background:transparent;color:var(--muted);border:2px dashed #3d3446;border-radius:8px;font:inherit;font-size:16px;font-weight:600;text-align:left}
 .toggles{display:flex;gap:8px;margin-top:12px}
 .tog{flex:1;border:3px solid var(--line);border-radius:8px;background:#3a3142;padding:8px 4px;font-size:17px;font-weight:700}
 .tog[aria-pressed="false"]{opacity:.5;text-decoration:line-through}
@@ -305,15 +304,15 @@ button:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
     <div class="gwrap">
       <div class="ghead"><button class="back" id="gBack" aria-label="Back to title">&lsaquo;</button><h2>Garage</h2><span class="silver" id="silverTxt">0</span></div>
       <div class="gbody"><div class="gcols"><div class="gcol">
-        <h3>Daily quests</h3><p class="note" id="dailyNote"></p><div id="dailyList"></div>
+        <p class="note" id="refundNote" hidden></p>
         <h3>Battlefield</h3><p class="note">Clear all four bosses in one run to unlock the next one.</p><div id="mapList"></div>
+        <h3>Chassis</h3><p class="note">The tank body you roll out in.</p><div id="chassisList"></div>
         <h3>Captain</h3><p class="note">Each captain has a perk and a drawback.</p><div id="capList"></div>
         <h3>Crew</h3><p class="note">One crew rides along: a perk, or a team that fights on its own.</p><div id="crewList"></div>
-        <h3>Starting module</h3><p class="note">Fitted from the first second. A front module replaces the Main Gun. Unlock more in the Workshop.</p><div id="smodList"></div>
-        <h3>Starting kit</h3><p class="note">Buy an artifact once, then start every run holding it. All artifacts still drop from supply chests.</p><div id="kitList"></div>
-        <h3>Chassis</h3><p class="note">The tank body you roll out in.</p><div id="chassisList"></div>
         </div><div class="gcol">
-        <h3>Workshop</h3><p class="note">You always have Main Gun, Broadside, Mine Dropper and Auto Turret. Buying anything in a category opens its next tier.</p><div id="modList"></div>
+        <h3>Starting module</h3><p class="note">Buy a module once, then start runs with it fitted (a front module replaces the Main Gun). Every module you own can also show up on level-up cards.</p><div id="smodList"></div>
+        <h3>Starting kit</h3><p class="note">Buy an artifact once, then start runs holding it. Artifacts also drop from supply chests.</p><div id="kitList"></div>
+        <h3>Daily quests</h3><p class="note" id="dailyNote"></p><div id="dailyList"></div>
         <h3>Milestones</h3><p class="note">Permanent goals. Some unlock new gear.</p><div id="msList"></div>
       </div></div></div>
       <div class="gfoot"><button class="big" id="rollBtn">Roll out</button></div>
@@ -643,54 +642,10 @@ const tankId=p=>{const L=LINES[p.chassis]||LINES.standard;return p.tier&&p.tline
 const hasCrew=id=>!!(G&&G.crew===id);
 const hasCap=id=>!!(G&&G.capId===id);
 // workshop: owning any item in a category opens its tier 2, owning three opens tier 3. mod = a module unlock, the rest are permanent perks
-const WORKSHOP=[
-  {id:'guns',name:'Guns',items:[
-    {id:'flamer',tier:1,mod:'flamer',cost:300},
-    {id:'hardened',tier:1,name:'Hardened Shells',desc:'+8% weapon damage.',cost:200},
-    {id:'tesla',tier:2,mod:'tesla',cost:600},
-    {id:'loaders',tier:2,name:'Quick Loaders',desc:'Weapons reload 8% faster.',cost:350},
-    {id:'twinmounts',tier:3,name:'Twin Mounts',desc:'Start every run with Broadside fitted.',cost:700},
-    {id:'autocannon',tier:2,mod:'autocannon',cost:500},
-    {id:'rockets',tier:3,mod:'rockets',cost:900},
-    {id:'napalm',tier:3,mod:'napalm',quest:1},
-    {id:'missiles',tier:3,mod:'missiles',quest:1}]},
-  {id:'ram',name:'Ramming',items:[
-    {id:'plow',tier:1,mod:'plow',cost:250},
-    {id:'prow',tier:1,name:'Reinforced Prow',desc:'+20% ramming damage.',cost:200},
-    {id:'tracks',tier:2,name:'Steel Tracks',desc:'Boost recharges 10% faster.',cost:300},
-    {id:'steamroller',tier:3,name:'Steamroller',desc:'Boost rams deal double damage and stun.',cost:700},
-    {id:'booster',tier:1,mod:'booster',cost:600},
-    {id:'water',tier:2,mod:'water',cost:700}]},
-  {id:'armor',name:'Armor',items:[
-    {id:'riveted',tier:1,name:'Riveted Hull',desc:'+15 max HP.',cost:200},
-    {id:'spaced',tier:2,name:'Spaced Armor',desc:'6% less damage taken.',cost:400},
-    {id:'fieldkit',tier:2,name:'Field Kit',desc:'Health crates heal 20% more.',cost:300},
-    {id:'secondwind',tier:3,name:'Second Wind',desc:'Once per run, survive a killing blow with 30% hull.',cost:900},
-    {id:'smoke',tier:3,mod:'smoke',quest:1}]},
-  {id:'gadgets',name:'Gadgets',items:[
-    {id:'drone',tier:1,mod:'drone',cost:400},
-    {id:'magnet',tier:1,name:'Long Magnet',desc:'+25% pickup range.',cost:200},
-    {id:'spare',tier:2,name:'Spare Parts',desc:'+1 reroll every run.',cost:350},
-    {id:'layer',tier:3,mod:'layer',quest:1},
-    {id:'salvage',tier:3,name:'Salvage Rig',desc:'+10% silver from every run.',cost:800},
-    {id:'howitzer',tier:2,mod:'howitzer',cost:1000},
-    {id:'troops',tier:2,mod:'troops',cost:800},
-    {id:'escort',tier:3,mod:'escort',quest:1}]},
-];
-const TIER_NEED=[0,0,1,3]; // items owned in the category to open each tier
-const wsOwned=it=>it.mod?SAVE.mods.includes(it.mod):SAVE.perks.includes(it.id);
-const wsCount=cat=>cat.items.filter(wsOwned).length;
-const hasPerk=id=>!!(SAVE&&SAVE.perks&&SAVE.perks.includes(id));
-function applyPerks(P){ // permanent workshop perks, applied at the start of every run
-  if(hasPerk('hardened'))P.wdm*=1.08;
-  if(hasPerk('prow'))P.ramDmg*=1.2;
-  if(hasPerk('tracks'))P.nitroMax*=0.9;
-  if(hasPerk('riveted')){P.maxHp+=15;P.hp=P.maxHp;}
-  if(hasPerk('spaced'))P.taken*=0.94;
-  if(hasPerk('magnet'))P.magnet*=1.25;
-  if(hasPerk('spare'))P.rerolls+=1;
-  if(hasPerk('salvage'))P.silverMult*=1.1;
-}
+// garage prices for modules (START_MODS are free, QUEST_MODS come from milestones). Buying one makes it selectable as the Starting module and lets it show up on level-up cards
+const MOD_PRICE={plow:250,flamer:300,drone:400,autocannon:500,tesla:600,booster:600,water:700,troops:800,rockets:900,howitzer:1000};
+// the old Workshop perks were removed: a save that bought any gets that silver back once (loadSave)
+const PERK_REFUND={hardened:200,loaders:350,twinmounts:700,prow:200,tracks:300,steamroller:700,riveted:200,spaced:400,fieldkit:300,secondwind:900,magnet:200,spare:350,salvage:800};
 const QUEST_MODS={layer:'m_mines',napalm:'m_flamer',smoke:'m_broadside',escort:'m_kills5k',missiles:'m_turret'}; // modules that only a milestone unlocks
 // quests: m = run metric (see runStats), run:1 = best single run counts, otherwise runs add up
 const DAILY=[
@@ -729,7 +684,8 @@ function loadSave(){const s=store.get();s.silver=s.silver||0;s.mods=s.mods||[];s
   s.best=Object.assign({time:0,gold:0,bosses:0},s.best||{});
   const d=s.daily||{};s.daily={date:typeof d.date==='string'?d.date:'',ids:Array.isArray(d.ids)?d.ids:[],prog:d.prog||{},done:d.done||{}};
   const ms=s.ms||{};s.ms={prog:ms.prog||{},done:ms.done||{}};
-  s.perks=Array.isArray(s.perks)?s.perks:[];
+  if(Array.isArray(s.perks)&&s.perks.length){const r=s.perks.reduce((a,id)=>a+(PERK_REFUND[id]||0),0);s.silver+=r;s.refunded=(s.refunded||0)+r;}
+  s.perks=[];
   s.crew=Array.isArray(s.crew)?s.crew:[];s.selCrew=s.crew.includes(s.selCrew)?s.selCrew:'';
   s.kit=Array.isArray(s.kit)?s.kit:[];s.selKit=s.kit.includes(s.selKit)?s.selKit:'';s.selMod=typeof s.selMod==='string'?s.selMod:'';
   s.chassis=Array.isArray(s.chassis)?s.chassis:['standard'];s.selChassis=s.chassis.includes(s.selChassis)?s.selChassis:'standard';
@@ -796,12 +752,12 @@ function newPlayer(){
     ramDmg:28,magnet:95,gunO:0,bulk:0,rMul:1,chassis:'standard',tier:0,tline:'',hitT:0,armor:0,level:1,xp:0,xpNext:6,nitro:0,nitroCd:0,nitroMax:7,hurt:0,odo:0,turA:0,
     modules:{front:mkMod('cannon'),side:null,back:null,top:null},kills:0,eaten:0,iframes:0,rerolls:2,wdm:1,taken:1,luck:0,silverMult:1,totalXp:0};
 }
-function mkMod(id,wdm){const d=MODS[id];return {id,lvl:1,dmg:d.dmg*(wdm||1),cd:d.cd*(hasPerk('loaders')?0.92:1)*(hasCrew('loader')?0.9:1)/(hasCap('tess')?1.4:1),range:(d.range||0)*(hasCrew('spotter')?1.15:1),radius:d.radius||0,shots:1,extra:1,t:0,act:0,ab:{cd:AB[id].cd*(hasCap('tess')?1.4:1),t:0,pow:0}};}
+function mkMod(id,wdm){const d=MODS[id];return {id,lvl:1,dmg:d.dmg*(wdm||1),cd:d.cd*(hasCrew('loader')?0.9:1)/(hasCap('tess')?1.4:1),range:(d.range||0)*(hasCrew('spotter')?1.15:1),radius:d.radius||0,shots:1,extra:1,t:0,act:0,ab:{cd:AB[id].cd*(hasCap('tess')?1.4:1),t:0,pow:0}};}
 function newGame(mapId,capId){
   const mapDef=MAPS.find(m=>m.id===(mapId||SAVE.selMap))||MAPS[0];const cap=CAPS.find(c=>c.id===(capId||SAVE.selCap))||CAPS[0];
-  const P=newPlayer();cap.ap(P);applyPerks(P);
+  const P=newPlayer();cap.ap(P);
   const ch=CHASSIS.find(c=>c.id===SAVE.selChassis)||CHASSIS[0];P.chassis=ch.id;ch.ap(P);G={crew:SAVE.selCrew,capId:cap.id}; // provisional, so mkMod sees the crew and captain
-  P.modules.front=mkMod('cannon',P.wdm);if(hasPerk('twinmounts'))P.modules.side=mkMod('broadside',P.wdm);
+  P.modules.front=mkMod('cannon',P.wdm);
   if(MODS[SAVE.selMod]&&modUnlocked(SAVE.selMod)){const d=MODS[SAVE.selMod];P.modules[d.slot]=mkMod(SAVE.selMod,P.wdm);} // Starting module (a front pick replaces the Main Gun)
   G={t:0,stage:1,stageT:0,boss:null,bossSpawned:false,bossT:0,overtime:false,cleared:false,otT:0,otNext:OT_PAY,otSilver:0,unlockMsg:'',droneOD:0,burns:[],shells:[],allies:[],smokeT:0,spawnT:1.5,crateT:22,mortarT:2,neutT:0,
     ents:[],pb:[],eb:[],mines:[],pick:[],parts:[],texts:[],strikes:[],bolts:[],drones:[],crates:[],tracks:[],drops:[],fires:[],helperT:38,helperN:0,rings:[],decals:[],flash:0,redflash:0,hitstop:0,combo:0,comboT:0,
@@ -1046,7 +1002,6 @@ function dmgPlayer(n){
   const p=G.p;if(p.iframes>0||mode!=='play')return;
   n*=(1-p.armor)*p.taken*G.mapDef.dmg;p.hp-=n;p.hitT=G.t;p.hurt=0.15;sfx('hurt');buzz(n>15?45:25);G.redflash=Math.min(0.5,G.redflash+0.12+n/90);G.shake=Math.min(12,G.shake+n*0.35);
   if(p.hp<=0){
-    if(hasPerk('secondwind')&&!G.secondWind){G.secondWind=true;p.hp=p.maxHp*0.3;p.iframes=1.5;banner('Second Wind','Your hull holds. Barely.');sfx('heal');buzz([40,30,40]);return;}
     p.hp=0;endRun(false);}
 }
 function gainXp(n){
@@ -1719,53 +1674,51 @@ function row(title,meta,o){
   if(o.onSel)el.addEventListener('click',o.onSel);
   return el;
 }
+// a garage list shows only the current pick (or the first few rows) until it is opened; picking or buying closes it again
+const gOpen={};
+function fillPicker(el,key,rows,shown,label){
+  el.innerHTML='';const open=!!gOpen[key];
+  const vis=open?rows:rows.filter((r,i)=>shown?i<shown:r.sel);vis.forEach(r=>el.appendChild(r.el));
+  if(rows.length>vis.length||open){const b=document.createElement('button');b.className='more';
+    b.textContent=open?'Show less':(label||'Change')+' ('+(rows.length-vis.length)+' more)';
+    b.addEventListener('click',e=>{e.stopPropagation();gOpen[key]=!open;renderGarage();});el.appendChild(b);}
+  el.onclick=()=>{gOpen[key]=false;}; // a pick or a purchase re-renders after this, closed
+}
 function renderGarage(){
   if(ensureDaily())persist();checkQuests(false); // e.g. maps cleared before quests existed
   $('#silverTxt').textContent=SAVE.silver;
-  const ml=$('#mapList');ml.innerHTML='';
-  MAPS.forEach(m=>{const open=SAVE.maps.includes(m.id);const req=MAPS.find(x=>x.id===m.req);
-    ml.appendChild(row(m.name,open?m.desc:'Locked. Clear '+(req?req.name:'')+' to unlock.',{sel:SAVE.selMap===m.id,locked:!open,tag:SAVE.cleared[m.id]?'Cleared':null,
-      onSel:open?()=>{SAVE.selMap=m.id;persist();renderGarage();}:null}));});
-  const crl=$('#crewList');crl.innerHTML='';
-  CREW.forEach(c=>{const own=!c.id||SAVE.crew.includes(c.id),q=c.quest&&!own&&MILESTONES.find(m=>m.id===c.quest);
-    crl.appendChild(row(c.name,q?'Milestone reward: '+q.t.toLowerCase()+'. '+c.perk:c.perk,{sel:SAVE.selCrew===c.id,locked:!own,price:own||q?null:c.cost,tag:q?'Quest':null,
+  const rn=$('#refundNote');rn.hidden=!SAVE.refunded;if(SAVE.refunded){rn.textContent='The Workshop is gone: every unlock is now picked in its own list. '+SAVE.refunded+' silver from Workshop upgrades was refunded.';SAVE.refunded=0;persist();}
+  fillPicker($('#mapList'),'map',MAPS.map(m=>{const open=SAVE.maps.includes(m.id);const req=MAPS.find(x=>x.id===m.req);
+    return {sel:SAVE.selMap===m.id,el:row(m.name,open?m.desc:'Locked. Clear '+(req?req.name:'')+' to unlock.',{sel:SAVE.selMap===m.id,locked:!open,tag:SAVE.cleared[m.id]?'Cleared':null,
+      onSel:open?()=>{SAVE.selMap=m.id;persist();renderGarage();}:null})};}));
+  fillPicker($('#crewList'),'crew',CREW.map(c=>{const own=!c.id||SAVE.crew.includes(c.id),q=c.quest&&!own&&MILESTONES.find(m=>m.id===c.quest);
+    return {sel:SAVE.selCrew===c.id,el:row(c.name,q?'Milestone reward: '+q.t.toLowerCase()+'. '+c.perk:c.perk,{sel:SAVE.selCrew===c.id,locked:!own,price:own||q?null:c.cost,tag:q?'Quest':null,
       onSel:own?()=>{SAVE.selCrew=c.id;persist();renderGarage();}:null,
-      onBuy:()=>{SAVE.silver-=c.cost;SAVE.crew.push(c.id);SAVE.selCrew=c.id;persist();renderGarage();}}));});
-  const sml=$('#smodList');sml.innerHTML='';
-  [''].concat(Object.keys(MODS).filter(id=>id!=='cannon'&&modUnlocked(id))).forEach(id=>{const d=MODS[id];
-    sml.appendChild(row(id?d.name+' ('+SLOT_NAME[d.slot]+')':'None',id?d.desc:'Start with the Main Gun only.',{sel:SAVE.selMod===id,onSel:()=>{SAVE.selMod=id;persist();renderGarage();}}));});
-  const kl=$('#kitList');kl.innerHTML='';
-  [''].concat(Object.keys(ARTIFACTS)).forEach(id=>{const A=ARTIFACTS[id],own=!id||SAVE.kit.includes(id);
-    kl.appendChild(row(id?A.name:'No kit',id?A.desc:'Artifacts only from supply chests.',{sel:SAVE.selKit===id,locked:!own,price:own?null:A.cost,
+      onBuy:()=>{SAVE.silver-=c.cost;SAVE.crew.push(c.id);SAVE.selCrew=c.id;persist();renderGarage();}})};}));
+  const modIds=SLOT_KEYS.flatMap(k=>Object.keys(MODS).filter(id=>id!=='cannon'&&MODS[id].slot===k));
+  fillPicker($('#smodList'),'mod',[''].concat(modIds).map(id=>{const d=MODS[id],own=!id||modUnlocked(id),q=id&&!own&&QUEST_MODS[id]&&MILESTONES.find(m=>m.id===QUEST_MODS[id]);
+    const meta=!id?'Start with the Main Gun only.':(q?'Milestone reward: '+q.t.toLowerCase()+'. ':'')+d.desc+' Ability: '+AB[id].name+'.';
+    return {sel:SAVE.selMod===id,el:row(id?d.name+' ('+SLOT_NAME[d.slot]+')':'None',meta,{sel:SAVE.selMod===id,locked:!own,tag:q?'Quest':null,price:own||q?null:MOD_PRICE[id],
+      onSel:own?()=>{SAVE.selMod=id;persist();renderGarage();}:null,
+      onBuy:()=>{SAVE.silver-=MOD_PRICE[id];SAVE.mods.push(id);SAVE.selMod=id;persist();renderGarage();}})};}));
+  fillPicker($('#kitList'),'kit',[''].concat(Object.keys(ARTIFACTS)).map(id=>{const A=ARTIFACTS[id],own=!id||SAVE.kit.includes(id);
+    return {sel:SAVE.selKit===id,el:row(id?A.name:'No kit',id?A.desc:'Artifacts only from supply chests.',{sel:SAVE.selKit===id,locked:!own,price:own?null:A.cost,
       onSel:own?()=>{SAVE.selKit=id;persist();renderGarage();}:null,
-      onBuy:()=>{SAVE.silver-=A.cost;SAVE.kit.push(id);SAVE.selKit=id;persist();renderGarage();}}));});
-  const chl=$('#chassisList');chl.innerHTML='';
-  CHASSIS.forEach(c=>{const own=SAVE.chassis.includes(c.id);
+      onBuy:()=>{SAVE.silver-=A.cost;SAVE.kit.push(id);SAVE.selKit=id;persist();renderGarage();}})};}));
+  fillPicker($('#chassisList'),'chassis',CHASSIS.map(c=>{const own=SAVE.chassis.includes(c.id);
     const LN=LINES[c.id];
-    chl.appendChild(row(c.name,c.perk+' Starts as the '+TANKS[LN.base].n+', then grows into '+LN.sn+' or '+LN.an+'.',{sel:SAVE.selChassis===c.id,locked:!own,price:own?null:c.cost,
+    return {sel:SAVE.selChassis===c.id,el:row(c.name,c.perk+' Starts as the '+TANKS[LN.base].n+', then grows into '+LN.sn+' or '+LN.an+'.',{sel:SAVE.selChassis===c.id,locked:!own,price:own?null:c.cost,
       onSel:own?()=>{SAVE.selChassis=c.id;persist();renderGarage();}:null,
-      onBuy:()=>{SAVE.silver-=c.cost;SAVE.chassis.push(c.id);SAVE.selChassis=c.id;persist();renderGarage();}}));});
-  const cl=$('#capList');cl.innerHTML='';
-  CAPS.forEach(c=>{const own=SAVE.caps.includes(c.id);
-    cl.appendChild(row(c.name,c.perk,{sel:SAVE.selCap===c.id,locked:!own,price:own?null:c.cost,
+      onBuy:()=>{SAVE.silver-=c.cost;SAVE.chassis.push(c.id);SAVE.selChassis=c.id;persist();renderGarage();}})};}));
+  fillPicker($('#capList'),'cap',CAPS.map(c=>{const own=SAVE.caps.includes(c.id);
+    return {sel:SAVE.selCap===c.id,el:row(c.name,c.perk,{sel:SAVE.selCap===c.id,locked:!own,price:own?null:c.cost,
       onSel:own?()=>{SAVE.selCap=c.id;persist();renderGarage();}:null,
-      onBuy:()=>{SAVE.silver-=c.cost;SAVE.caps.push(c.id);SAVE.selCap=c.id;persist();renderGarage();}}));});
-  const mo=$('#modList');mo.innerHTML='';
-  WORKSHOP.forEach(cat=>{const n=wsCount(cat);const h=document.createElement('h4');h.className='wscat';h.textContent=cat.name;
-    const c_=document.createElement('span');c_.textContent=n+'/'+cat.items.length+' owned';h.appendChild(c_);mo.appendChild(h);
-    cat.items.forEach(it=>{const own=wsOwned(it),open=n>=TIER_NEED[it.tier];
-      const d=it.mod&&MODS[it.mod],title=(d?d.name+' ('+SLOT_NAME[d.slot]+')':it.name),tierTag='Tier '+it.tier;
-      let meta=d?d.desc+(AB[it.mod].none?'':' Ability: '+AB[it.mod].name+'.'):it.desc;
-      if(it.quest&&!own){const q=MILESTONES.find(m=>m.id===QUEST_MODS[it.mod]);meta='Milestone reward: '+q.t.toLowerCase()+'.';}
-      else if(!open&&!own)meta='Opens after '+TIER_NEED[it.tier]+' '+cat.name+' item'+(TIER_NEED[it.tier]>1?'s':'')+'. '+meta;
-      mo.appendChild(row(title,meta,{locked:!own,tag:own?'Owned':(it.quest?'Quest':!open?tierTag:null),price:own||it.quest||!open?null:it.cost,
-        onBuy:()=>{SAVE.silver-=it.cost;if(it.mod)SAVE.mods.push(it.mod);else SAVE.perks.push(it.id);persist();renderGarage();}}));});});
+      onBuy:()=>{SAVE.silver-=c.cost;SAVE.caps.push(c.id);SAVE.selCap=c.id;persist();renderGarage();}})};}));
   // quests
   const dl=$('#dailyList');dl.innerHTML='';activeDaily().forEach(q=>dl.appendChild(questRow(q)));
   const nx=QDATE?new Date(QDATE):new Date(),mins=Math.max(1,Math.ceil((new Date(nx.getFullYear(),nx.getMonth(),nx.getDate()+1)-nx)/60000));
   $('#dailyNote').textContent='Three new quests every day. Next ones in '+(mins>=60?Math.floor(mins/60)+'h '+(mins%60)+'m':mins+'m')+'.';
-  const ml_=$('#msList');ml_.innerHTML='';
-  MILESTONES.filter(q=>!SAVE.ms.done[q.id]).concat(MILESTONES.filter(q=>SAVE.ms.done[q.id])).forEach(q=>ml_.appendChild(questRow(q)));
+  fillPicker($('#msList'),'ms',MILESTONES.filter(q=>!SAVE.ms.done[q.id]).concat(MILESTONES.filter(q=>SAVE.ms.done[q.id])).map(q=>({el:questRow(q)})),3,'Show all');
 }
 function questRow(q){
   const done=!!qStore(q).done[q.id],v=done?q.n:Math.min(q.n,qVal(q,ZR));
@@ -1971,7 +1924,7 @@ if(!e.d.stat&&!e.d.boss){e.x+=b.vx*0.012;e.y+=b.vy*0.012;}let bd=b.dmg;if(e.d.ar
   G.pick=G.pick.filter(k=>!k.got);
   if(G.pick.length>300)G.pick.splice(0,G.pick.length-300);
   // crates
-  for(const c of G.crates){if(Math.hypot(p.x-c.x,p.y-c.y)<p.r+16){c.got=true;const h=(CRATE_HEAL[0]+CRATE_HEAL[1]*G.bossKills)*(hasPerk('fieldkit')?1.2:1)*(hasCrew('cook')?1.3:1);p.hp=Math.min(p.maxHp,p.hp+h);addText(p.x,p.y-p.r-10,'+'+Math.round(h)+' HP','#7be37b');parts(c.x,c.y,10,'#ffffff',150,4,0.5);sfx('heal');buzz(10);}}
+  for(const c of G.crates){if(Math.hypot(p.x-c.x,p.y-c.y)<p.r+16){c.got=true;const h=(CRATE_HEAL[0]+CRATE_HEAL[1]*G.bossKills)*(hasCrew('cook')?1.3:1);p.hp=Math.min(p.maxHp,p.hp+h);addText(p.x,p.y-p.r-10,'+'+Math.round(h)+' HP','#7be37b');parts(c.x,c.y,10,'#ffffff',150,4,0.5);sfx('heal');buzz(10);}}
   G.crates=G.crates.filter(c=>!c.got);
   for(const dr of G.drops){dr.life-=dt;
     if(Math.hypot(p.x-dr.x,p.y-dr.y)<p.r+20){dr.life=0;
@@ -2021,8 +1974,7 @@ function contact(e,dx,dy,dist,rr){
     e.hit=0.4;
     const front=Math.abs(angDiff(p.a,Math.atan2(-dy,-dx)))<0.75;
     const plow=p.modules.front&&p.modules.front.id==='plow';
-    let rd=p.ramDmg*(0.35+Math.abs(p.v)/200)*(p.nitro>0?2:1)*(p.nitro>0&&hasPerk('steamroller')?2:1);
-    if(p.nitro>0&&hasPerk('steamroller')&&!d.boss&&!d.stat)e.stun=1.2;
+    let rd=p.ramDmg*(0.35+Math.abs(p.v)/200)*(p.nitro>0?2:1);
     if(hasArt('cowcatcher'))rd*=1+0.6*Math.min(1,Math.abs(p.v)/250);
     if(front&&plow)rd+=p.modules.front.dmg;
     hurt(e,rd);if(e.dead&&hasArt('vampire'))p.hp=Math.min(p.maxHp,p.hp+3);
@@ -2842,7 +2794,7 @@ function frame(now){
 }
 showTitle();
 requestAnimationFrame(frame);
-if(window.__SJ_TEST)window.__SJ_TEST({get G(){return G;},get mode(){return mode;},update,render,startRun,joy,openLevel,setMode:m=>{mode=m;},pick:i=>{if(onPick)onPick(lastCards[i%lastCards.length]);},get SAVE(){return SAVE;},CREW,CHASSIS,WORKSHOP,ARTIFACTS,openChest,useAbility,afterPick,MASTERY,addEnt,mkMod,upgradePool,AB,hurt,setSave:o=>{store.set(o);SAVE=loadSave();recoverRun();},setDate:d=>{QDATE=d;},ensureDaily,checkQuests,runStats,snapshotRun,QUESTS:{DAILY,MILESTONES},openGarage,renderGarage,endRun,audioInit,get R3(){return R3;},MODS,TANKS,LINES,tankId,tankMesh3D,openBossReward,CAPS,tryNitro,kill,frame:dt=>{if(mode==='play')update(hasCap('ozzy')?dt*1.4:dt);}});
+if(window.__SJ_TEST)window.__SJ_TEST({get G(){return G;},get mode(){return mode;},update,render,startRun,joy,openLevel,setMode:m=>{mode=m;},pick:i=>{if(onPick)onPick(lastCards[i%lastCards.length]);},get SAVE(){return SAVE;},CREW,CHASSIS,MOD_PRICE,ARTIFACTS,openChest,useAbility,afterPick,MASTERY,addEnt,mkMod,upgradePool,AB,hurt,setSave:o=>{store.set(o);SAVE=loadSave();recoverRun();},setDate:d=>{QDATE=d;},ensureDaily,checkQuests,runStats,snapshotRun,QUESTS:{DAILY,MILESTONES},openGarage,renderGarage,endRun,audioInit,get R3(){return R3;},MODS,TANKS,LINES,tankId,tankMesh3D,openBossReward,CAPS,tryNitro,kill,frame:dt=>{if(mode==='play')update(hasCap('ozzy')?dt*1.4:dt);}});
 })();
 </script>
 </body>
