@@ -204,6 +204,27 @@ run('iron','lou',true);run('ash','ida',true);run('ash','sid',false);run('iron','
  assert.ok(S.crew.includes('radio')&&S.ms.done.m_tanks,'Destroy 100 tanks unlocks the Radio Operator');api.endRun('quit');
  S.crew=saved.crew;S.selCrew=saved.selCrew;S.selMap=saved.selMap;S.ms.done.m_tanks=saved.done;S.ms.prog.m_tanks=saved.prog;
  console.log('fighting crews ok:',JSON.stringify(res));}
+// --- round 2 modules: smoke eats shots, troops and escorts fight, missiles home in, the water jet pushes ---
+{api.SAVE.selMap='dust';api.SAVE.selCrew='';api.startRun();const G=api.G,P=G.p;G.spawnT=G.helperT=1e9;G.ents=G.ents.filter(e=>e.d.neutral);
+ const dummy=(x,y)=>{const e=api.addEnt('tank',x,y);e.hp=e.max=1e6;e.d=Object.assign({},e.d,{spd:0,shoot:null,contact:0,lob:null});return e;};
+ const volley=n=>{for(let i=0;i<n;i++){const a=i*TAU_/n;G.eb.push({x:P.x+Math.cos(a)*160,y:P.y+Math.sin(a)*160,vx:-Math.cos(a)*300,vy:-Math.sin(a)*300,dmg:1,r:5,life:2,col:'#fff'});}
+   let lost=0;for(let i=0;i<60;i++){const h=P.hp;P.iframes=0;api.update(1/60);lost+=h-P.hp;P.hp=P.maxHp;}return Math.round(lost*10)/10;};
+ const TAU_=Math.PI*2;for(const k in P.modules)P.modules[k]=null;api.update(1/60);
+ const bare=volley(40);P.modules.side=api.mkMod('smoke');const thin=volley(40);api.useAbility('side');const screen=volley(40);
+ assert.ok(bare>0&&thin<bare&&screen===0,'smoke: some shots fizzle, the screen eats all '+[bare,thin,screen]);
+ P.modules.side=api.mkMod('troops');P.modules.side.t=0;const d1=dummy(P.x+180,P.y);
+ for(let i=0;i<60*3;i++){P.v=0;api.update(1/60);P.hp=P.maxHp;}
+ assert.ok(G.allies.filter(a=>a.kind==='troop').length===2&&d1.hp<1e6,'troops drop and shoot');
+ P.modules.back=api.mkMod('escort');api.update(1/60);assert.strictEqual(G.allies.filter(a=>a.perm).length,1,'one escort follows');
+ api.useAbility('back');assert.strictEqual(G.allies.filter(a=>a.kind==='escort').length,2,'Call Support adds one');
+ for(let i=0;i<60;i++)api.update(1/60);api.render();
+ G.allies=[];P.modules.side=null;P.modules.back=null;P.modules.top=api.mkMod('missiles');P.modules.top.t=0;d1.dead=true;
+ const d2=dummy(P.x,P.y+260);for(let i=0;i<60*2;i++){P.v=0;api.update(1/60);P.hp=P.maxHp;}
+ assert.ok(d2.hp<1e6,'missile reaches its target');
+ P.modules.top=null;d2.dead=true;P.modules.front=api.mkMod('water');const d3=api.addEnt('grunt',P.x+150,P.y);d3.hp=d3.max=1e6;d3.d=Object.assign({},d3.d,{spd:0,shoot:null});
+ const x0=d3.x;for(let i=0;i<60;i++){P.v=0;api.update(1/60);P.hp=P.maxHp;}
+ assert.ok(d3.x>x0+20&&d3.hp<1e6,'water jet pushes and hurts '+(d3.x-x0).toFixed(0));
+ api.render();api.endRun('quit');console.log('round 2 modules ok:',JSON.stringify({bare,thin,screen}));}
 // --- ranged and static enemies can't pile up (per-type caps) ---
 {api.SAVE.selMap='dust';api.startRun();const G=api.G,P=G.p;G.stage=2;let maxT=0,maxW=0;
  for(let i=0;i<60*120;i++){if(api.mode==='play'){api.joy.dx=0;api.joy.dy=0;api.update(1/60);P.hp=P.maxHp;if(G.boss)G.boss=null,G.bossSpawned=true;
