@@ -122,18 +122,15 @@ run('iron','lou',true);run('ash','ida',true);run('ash','sid',false);run('iron','
  api.setMode('play');api.update(1/60);assert.ok(P.bulk>0&&P.r>r0,'upgrades add bulk: '+P.bulk.toFixed(2)+' r '+P.r.toFixed(1));
  const b0=P.bulk;P.bulk=10;api.update(1/60);const rBig=P.r;P.bulk=b0;assert.ok(rBig>r0+5,'bulk grows the hull');
  console.log('bulk ok: bulk',P.bulk.toFixed(2),'radius',r0,'->',P.r.toFixed(1));api.endRun('quit');}
-// --- tiered workshop: tiers open by category, perks apply, old module purchases count ---
-{const S=api.SAVE,saved={mods:S.mods.slice(),perks:S.perks.slice(),silver:S.silver};
- S.mods=['plow'];S.perks=[];const W=api.WORKSHOP,cat=id=>W.find(c=>c.id===id),own=it=>it.mod?S.mods.includes(it.mod):S.perks.includes(it.id);
- const count=c=>c.items.filter(own).length;assert.strictEqual(count(cat('ram')),1,'old Ram Plow purchase counts toward Ramming');
- S.perks=['hardened','prow','riveted','spaced','magnet','spare','salvage','loaders','twinmounts','secondwind','fieldkit','tracks','steamroller'];
- api.SAVE.selMap='dust';api.SAVE.selCap='sarge';api.startRun();const G=api.G,P=G.p;
- assert.ok(Math.abs(P.wdm-1.08)<1e-9&&Math.abs(P.ramDmg-28*1.2)<1e-9&&P.maxHp===135&&Math.abs(P.taken-0.94)<1e-9&&P.rerolls===3,'perks apply at run start');
- assert.ok(P.modules.side&&P.modules.side.id==='broadside','Twin Mounts fits Broadside');assert.ok(P.modules.front.cd<0.85,'Quick Loaders');
- P.iframes=0;P.hp=5;api.update(0);G.eb=[{x:P.x,y:P.y,vx:0,vy:0,dmg:999,r:5,life:1,col:'#fff'}];api.update(1/60);
- assert.strictEqual(api.mode,'play','Second Wind saves you once');assert.ok(Math.abs(P.hp-P.maxHp*0.3)<1);
- P.iframes=0;G.eb=[{x:P.x,y:P.y,vx:0,vy:0,dmg:9999,r:5,life:1,col:'#fff'}];api.update(1/60);assert.strictEqual(api.mode,'over','only once per run');
- S.mods=saved.mods;S.perks=saved.perks;S.silver=saved.silver;console.log('workshop ok');}
+// --- garage: old Workshop perks are refunded once; modules are bought and picked in one list ---
+{const saved=JSON.parse(JSON.stringify(api.SAVE));
+ api.setSave(Object.assign({},saved,{perks:['hardened','riveted','secondwind'],silver:100,refunded:0}));
+ assert.ok(api.SAVE.silver===100+200+200+900&&api.SAVE.perks.length===0&&api.SAVE.refunded===1300,'perks refunded once: '+api.SAVE.silver);
+ api.setSave(Object.assign({},api.SAVE));assert.strictEqual(api.SAVE.silver,1400,'no second refund');
+ api.SAVE.mods=api.SAVE.mods.filter(m=>m!=='rockets');assert.ok(api.MOD_PRICE.rockets>0,'modules have a garage price');
+ api.openGarage();api.SAVE.silver=5000;api.SAVE.mods.push('rockets');api.SAVE.selMod='rockets';api.renderGarage();api.SAVE.selMap='dust';api.startRun();
+ assert.strictEqual(api.G.p.modules.side.id,'rockets','a bought module starts fitted');api.endRun('quit');
+ api.setSave(saved);console.log('garage ok');}
 // --- artifacts: a chest per stage, a choice of two, and each one works ---
 {api.SAVE.selMap='dust';api.startRun();const G=api.G,P=G.p;G.chestT=0.01;api.update(1/60);
  assert.strictEqual(G.chests.length,1,'a chest spawns');const c=G.chests[0];P.x=c.x;P.y=c.y;api.update(1/60);
