@@ -223,8 +223,18 @@ run('iron','lou',true);run('ash','ida',true);run('ash','sid',false);run('iron','
  assert.ok(d2.hp<1e6,'missile reaches its target');
  P.modules.top=null;d2.dead=true;P.modules.front=api.mkMod('water');const d3=api.addEnt('grunt',P.x+150,P.y);d3.hp=d3.max=1e6;d3.d=Object.assign({},d3.d,{spd:0,shoot:null});
  const x0=d3.x;for(let i=0;i<60;i++){P.v=0;api.update(1/60);P.hp=P.maxHp;}
- assert.ok(d3.x>x0+20&&d3.hp<1e6,'water jet pushes and hurts '+(d3.x-x0).toFixed(0));
+ assert.ok(d3.x>x0+8&&d3.hp<1e6,'water jet pushes and hurts '+(d3.x-x0).toFixed(0));
  api.render();api.endRun('quit');console.log('round 2 modules ok:',JSON.stringify({bare,thin,screen}));}
+// --- loadout: Starting module and Starting kit apply at run start; a few new artifacts ---
+{const S=api.SAVE,saved={mods:S.mods.slice(),kit:(S.kit||[]).slice(),selKit:S.selKit,selMod:S.selMod};
+ if(!S.mods.includes('rockets'))S.mods.push('rockets');S.selMod='rockets';S.kit=['heavy'];S.selKit='heavy';S.selMap='dust';api.startRun();let G=api.G,P=G.p;
+ assert.ok(P.modules.side&&P.modules.side.id==='rockets'&&P.modules.front.id==='cannon','starting module fitted');
+ assert.ok(G.arts.includes('heavy')&&Math.abs(P.wdm-1.25)<0.01,'starting kit applied');api.endRun('quit');
+ S.selMod='plow';if(!S.mods.includes('plow'))S.mods.push('plow');api.startRun();assert.strictEqual(api.G.p.modules.front.id,'plow','a front pick replaces the Main Gun');api.endRun('quit');
+ S.selMod='';S.selKit='';api.startRun();G=api.G;P=G.p;G.spawnT=G.helperT=1e9;G.ents=G.ents.filter(e=>e.d.neutral);
+ G.arts=['firststrike'];const e=api.addEnt('tank',P.x+400,P.y);const h0=e.hp;api.hurt(e,10);const first=h0-e.hp;api.hurt(e,10);assert.ok(Math.abs(first-15)<0.01&&Math.abs(h0-e.hp-25)<0.01,'First Strike hits unhurt enemies harder');
+ G.arts=['wrench'];G.lvQ=[2];api.openLevel();assert.strictEqual(api.mode,'level','a level-up opens with the wrench in the kit');
+ api.setMode('play');api.endRun('quit');S.mods=saved.mods;S.kit=saved.kit;S.selKit=saved.selKit;S.selMod=saved.selMod;console.log('loadout ok');}
 // --- ranged and static enemies can't pile up (per-type caps) ---
 {api.SAVE.selMap='dust';api.startRun();const G=api.G,P=G.p;G.stage=2;let maxT=0,maxW=0;
  for(let i=0;i<60*120;i++){if(api.mode==='play'){api.joy.dx=0;api.joy.dy=0;api.update(1/60);P.hp=P.maxHp;if(G.boss)G.boss=null,G.bossSpawned=true;

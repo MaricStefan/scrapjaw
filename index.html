@@ -309,6 +309,8 @@ button:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
         <h3>Battlefield</h3><p class="note">Clear all four bosses in one run to unlock the next one.</p><div id="mapList"></div>
         <h3>Captain</h3><p class="note">Each captain has a perk and a drawback.</p><div id="capList"></div>
         <h3>Crew</h3><p class="note">One crew rides along: a perk, or a team that fights on its own.</p><div id="crewList"></div>
+        <h3>Starting module</h3><p class="note">Fitted from the first second. A front module replaces the Main Gun. Unlock more in the Workshop.</p><div id="smodList"></div>
+        <h3>Starting kit</h3><p class="note">Buy an artifact once, then start every run holding it. All artifacts still drop from supply chests.</p><div id="kitList"></div>
         <h3>Chassis</h3><p class="note">The tank body you roll out in.</p><div id="chassisList"></div>
         </div><div class="gcol">
         <h3>Workshop</h3><p class="note">You always have Main Gun, Broadside, Mine Dropper and Auto Turret. Buying anything in a category opens its next tier.</p><div id="modList"></div>
@@ -565,7 +567,25 @@ const ARTIFACTS={
   heavy:     {name:'Heavy Rounds',desc:'+25% weapon damage, 8% slower.',icon:'cannon',ap:p=>{p.wdm*=1.25;p.spdMult*=0.92;for(const k in p.modules)if(p.modules[k])p.modules[k].dmg*=1.25;}},
   lucky:     {name:'Lucky Coin',desc:'+2 rerolls; rare and epic upgrades show up more.',icon:'coin',ap:p=>{p.rerolls+=2;p.luck=1;}},
   goldtooth: {name:'Gold Tooth',desc:'+20% silver from this run.',icon:'tooth',ap:p=>{p.silverMult*=1.2;}},
+  rations:   {name:'Field Rations',desc:'Fighting crews attack 15% faster.',icon:'troops',cost:600},
+  hulldown:  {name:'Hull Down',desc:'While you stand still, weapons fire 50% faster.',icon:'armor',cost:1500},
+  warbonds:  {name:'War Bonds',desc:'Destroyed vehicles have a 10% chance to pay 10 silver.',icon:'coin',cost:800},
+  shrapnel:  {name:'Shrapnel Core',desc:'Destroyed vehicles burst into six shrapnel shots.',icon:'mines',cost:1400},
+  cowcatcher:{name:'Cowcatcher',desc:'Ramming damage grows with your speed, up to +60%.',icon:'ram',cost:500},
+  firststrike:{name:'First Strike',desc:'+50% damage to enemies that are still unhurt.',icon:'cannon',cost:1000},
+  detector:  {name:'Metal Detector',desc:'Destroyed vehicles have a 2% chance to drop a supply chest.',icon:'magnet',cost:6000},
+  convoy:    {name:'Convoy Orders',desc:'While you Boost, friendly troops, escorts and crews move and fire 50% faster.',icon:'escort',cost:800},
+  promotion: {name:'Field Promotion',desc:'Every level-up resets all ability cooldowns.',icon:'flag',cost:4500},
+  furnace:   {name:'Scrap Furnace',desc:'Everything you eat takes 0.2 s off every ability cooldown.',icon:'engine',cost:1600},
+  thermite:  {name:'Thermite Shells',desc:'Main Gun and Autocannon shells leave a small fire where they hit.',icon:'flamer',cost:1800},
+  tally:     {name:'Kill Tally',desc:'Every vehicle destroyed makes rare and epic upgrades a little more likely.',icon:'skull',cost:5000},
+  dynamo:    {name:'Dynamo',desc:'Everything you eat recharges Boost a little.',icon:'nitro',cost:1000},
+  adrenaline:{name:'Adrenaline',desc:'Ability cooldowns run 50% faster while you Boost.',icon:'echo',cost:750},
+  wrench:    {name:'Salvage Wrench',desc:'Level-ups offer a fourth card: skip the upgrade and repair 40 hull.',icon:'repair',cost:1800},
+  conscript: {name:'Conscription',desc:'Eating a soldier has a 20% chance to recruit a friendly rifleman.',icon:'troops',cost:1200},
 };
+Object.entries({incendiary:900,nitromines:700,shockboost:800,ricochet:1000,overclock:1200,echo:1000,vampire:700,plating:800,magnetcore:400,heavy:1200,lucky:900,goldtooth:1000})
+  .forEach(([k,c])=>{ARTIFACTS[k].cost=c;}); // Starting kit prices for the original artifacts
 const hasArt=id=>!!(G&&G.arts&&G.arts.includes(id));
 // crew: one per run, a perk with no drawback. chassis: the tank body (rMul scales the hull radius)
 const CREW=[
@@ -711,6 +731,7 @@ function loadSave(){const s=store.get();s.silver=s.silver||0;s.mods=s.mods||[];s
   const ms=s.ms||{};s.ms={prog:ms.prog||{},done:ms.done||{}};
   s.perks=Array.isArray(s.perks)?s.perks:[];
   s.crew=Array.isArray(s.crew)?s.crew:[];s.selCrew=s.crew.includes(s.selCrew)?s.selCrew:'';
+  s.kit=Array.isArray(s.kit)?s.kit:[];s.selKit=s.kit.includes(s.selKit)?s.selKit:'';s.selMod=typeof s.selMod==='string'?s.selMod:'';
   s.chassis=Array.isArray(s.chassis)?s.chassis:['standard'];s.selChassis=s.chassis.includes(s.selChassis)?s.selChassis:'standard';
   return s;}
 let SAVE=loadSave();
@@ -781,11 +802,13 @@ function newGame(mapId,capId){
   const P=newPlayer();cap.ap(P);applyPerks(P);
   const ch=CHASSIS.find(c=>c.id===SAVE.selChassis)||CHASSIS[0];P.chassis=ch.id;ch.ap(P);G={crew:SAVE.selCrew,capId:cap.id}; // provisional, so mkMod sees the crew and captain
   P.modules.front=mkMod('cannon',P.wdm);if(hasPerk('twinmounts'))P.modules.side=mkMod('broadside',P.wdm);
+  if(MODS[SAVE.selMod]&&modUnlocked(SAVE.selMod)){const d=MODS[SAVE.selMod];P.modules[d.slot]=mkMod(SAVE.selMod,P.wdm);} // Starting module (a front pick replaces the Main Gun)
   G={t:0,stage:1,stageT:0,boss:null,bossSpawned:false,bossT:0,overtime:false,cleared:false,otT:0,otNext:OT_PAY,otSilver:0,unlockMsg:'',droneOD:0,burns:[],shells:[],allies:[],smokeT:0,spawnT:1.5,crateT:22,mortarT:2,neutT:0,
     ents:[],pb:[],eb:[],mines:[],pick:[],parts:[],texts:[],strikes:[],bolts:[],drones:[],crates:[],tracks:[],drops:[],fires:[],helperT:38,helperN:0,rings:[],decals:[],flash:0,redflash:0,hitstop:0,combo:0,comboT:0,
     p:P,mapDef,cap,capId:cap.id,crew:SAVE.selCrew,bossKills:0,lvQ:[],shake:0,cam:{x:WORLD/2,y:WORLD/2},
     sentries:[],hazards:[],mastQ:[],arts:[],chests:[],chestT:rnd(20,40),clouds:[],waves:[],rs:{on:false,eat:{},kill:{}},qDone:[],qT:0.5};
   if(hasCap('kat'))G.helperT/=2;
+  if(ARTIFACTS[SAVE.selKit]&&SAVE.kit.includes(SAVE.selKit)){G.arts.push(SAVE.selKit);const A=ARTIFACTS[SAVE.selKit];if(A.ap)A.ap(P);} // Starting kit
   for(let i=0;i<75;i++)spawnNeutral(true);
   if(R3.on)setupWorld(G.mapDef);
 }
@@ -962,6 +985,7 @@ function debris(x,y,n,spd){if(G.parts.length>520)return;for(let i=0;i<n;i++){con
 /* ---------- combat helpers ---------- */
 function hurt(e,dmg){
   if(e.dead||e.hidden)return;
+  if(hasArt('firststrike')&&!e.d.neutral&&e.hp>=e.max)dmg*=1.5;
   if(e.d.relay){if(e.owner&&!e.owner.dead){e.flash=0.07;hurt(e.owner,dmg*0.6);}return;} // wyrm segments pass damage to the head
   if(e.shield>0){if(Math.random()<0.3)parts(e.x+rnd(-e.r,e.r)*.6,e.y+rnd(-e.r,e.r)*.6,2,'#cfd6e0',160,3,0.2);if(e.shield>=1){e.flash=0.05;return;}dmg*=1-e.shield;}
   e.hp-=dmg;e.flash=0.07;
@@ -971,6 +995,11 @@ function hurt(e,dmg){
 function kill(e){
   e.dead=true;const p=G.p;const bt_=e.d.base||e.type;G.rs.kill[bt_]=(G.rs.kill[bt_]||0)+1;
   if(hasCap('hank')&&!e.d.neutral&&HANK_V.includes(bt_)){p.maxHp+=1;p.hp+=1;}
+  if(!e.d.neutral&&!e.d.boss&&HANK_V.includes(bt_)){ // vehicle artifacts
+    if(hasArt('warbonds')&&Math.random()<0.1){G.bonusSilver=(G.bonusSilver||0)+10;addText(e.x,e.y-e.r,'+10 silver','#d9e1ea');}
+    if(hasArt('shrapnel'))for(let i=0;i<6;i++)shoot(e.x,e.y,i*TAU/6+rnd(0,0.5),520,10*p.wdm,180,{r:4,col:'#ffcf6a'});
+    if(hasArt('detector')&&Math.random()<0.02){G.chests.push({x:e.x,y:e.y});banner('','A supply chest dropped!');}
+    if(hasArt('tally'))p.tally=(p.tally||0)+1;}
   parts(e.x,e.y,e.d.boss?60:10,e.d.neutral?'#9a8a6a':'#e2722c',e.d.boss?380:180,e.d.boss?9:5,e.d.boss?1.1:0.5);
   if(e.d.boss){
     if(e.twin&&!e.twin.dead){const o=e.twin;o.twin=null;o.enraged=true;if(G.boss===e)G.boss=o; // first kiln down: the other goes berserk
@@ -1023,7 +1052,7 @@ function dmgPlayer(n){
 function gainXp(n){
   if(hasCrew('scrounger'))n*=1.15;
   const p=G.p;p.xp+=n;p.totalXp+=n;
-  while(p.xp>=p.xpNext){p.xp-=p.xpNext;p.level++;p.xpNext=Math.round(p.xpNext*1.2+4);G.lvQ.push(p.level);}
+  while(p.xp>=p.xpNext){p.xp-=p.xpNext;p.level++;p.xpNext=Math.round(p.xpNext*1.2+4);G.lvQ.push(p.level);if(hasArt('promotion'))for(const k of SLOT_KEYS){const m=p.modules[k];if(m)m.ab.t=0;}}
 }
 function nearest(x,y,range,filter){
   let best=null,bd=range*range;
@@ -1032,7 +1061,7 @@ function nearest(x,y,range,filter){
   return best;
 }
 function shoot(x,y,a,spd,dmg,range,opt){
-  G.pb.push({x,y,vx:Math.cos(a)*spd,vy:Math.sin(a)*spd,dmg,life:range/spd,r:(opt&&opt.r)||5,pierce:(opt&&opt.pierce)||0,hits:[],col:(opt&&opt.col)||'#ffd25a',home:opt&&opt.home,boom:opt&&opt.boom});
+  G.pb.push({x,y,vx:Math.cos(a)*spd,vy:Math.sin(a)*spd,dmg,life:range/spd,r:(opt&&opt.r)||5,pierce:(opt&&opt.pierce)||0,hits:[],col:(opt&&opt.col)||'#ffd25a',home:opt&&opt.home,boom:opt&&opt.boom,shell:opt&&opt.shell});
 }
 function eshoot(x,y,a,spd,dmg,r,col){
   if(G.eb.length>260)return;
@@ -1052,7 +1081,7 @@ function updateCrew(dt){
   for(const sh of G.shells){sh.t-=dt;if(sh.t<=0){explode(sh.x,sh.y,sh.r,sh.dmg,false,true);if(sh.burn){G.burns.push({x:sh.x,y:sh.y,r:46,life:2.5,max:2.5,dps:sh.burn});if(G.burns.length>44)G.burns.shift();}}}
   G.shells=G.shells.filter(sh=>sh.t>0);
   const C=CREW.find(x=>x.id===c);if(!C||!C.fight)return;
-  G.crewT=(G.crewT||0)-dt;if(G.crewT>0)return;
+  G.crewT=(G.crewT||0)-dt*(hasArt('rations')?1.15:1)*(hasArt('convoy')&&p.nitro>0?1.5:1);if(G.crewT>0)return;
   const pw=p.wdm*(1+0.4*(G.stage-1)),aim=e=>Math.atan2(e.y-p.y,e.x-p.x);
   if(c==='riflemen'){const e=nearest(p.x,p.y,360);if(!e){G.crewT=0.2;return;}G.crewT=0.45;
     shoot(p.x,p.y,aim(e)+rnd(-0.04,0.04),700,6*pw,380,{r:4,col:'#fff2b0'});sfx('pew');}
@@ -1079,10 +1108,10 @@ function mkEscort(m,oa,life,mul){const p=G.p;
   return {kind:'escort',m,perm:life===Infinity,x:p.x-Math.cos(p.a)*p.r*2,y:p.y-Math.sin(p.a)*p.r*2,a:p.a,ga:p.a,oa,dist:p.r*2.4+34,t:rnd(0,0.6),life,max:life,mul,range:m.range};}
 function trimAllies(){let n=G.allies.filter(a=>a.kind==='troop').length;while(n>12){const i=G.allies.findIndex(a=>a.kind==='troop');G.allies.splice(i,1);n--;}}
 function updateAllies(dt){
-  const p=G.p;
-  for(const a of G.allies){a.life-=dt;a.t-=dt;const esc=a.kind==='escort';
+  const p=G.p,cv=hasArt('convoy')&&p.nitro>0?1.5:1;
+  for(const a of G.allies){a.life-=dt;a.t-=dt*cv;const esc=a.kind==='escort';
     const oa=p.a+a.oa,sx=p.x+Math.cos(oa)*a.dist,sy=p.y+Math.sin(oa)*a.dist,dx=sx-a.x,dy=sy-a.y,d=Math.hypot(dx,dy);
-    const sp=(esc?p.baseSpeed*p.spdMult*1.3:160)*(d>350?3:1);
+    const sp=(esc?p.baseSpeed*p.spdMult*1.3:160)*(d>350?3:1)*cv;
     if(d>6){a.a=Math.atan2(dy,dx);const k=Math.min(d,sp*dt);a.x+=dx/d*k;a.y+=dy/d*k;}
     const tg=nearest(a.x,a.y,a.range);
     if(tg){a.ga=Math.atan2(tg.y-a.y,tg.x-a.x);if(a.t<=0){a.t=esc?a.m.cd:a.cd;
@@ -1094,21 +1123,21 @@ function updateAllies(dt){
 
 /* ---------- player modules ---------- */
 function updateModules(dt){
-  const p=G.p;const M=p.modules;
-  for(const k of SLOT_KEYS){const m=M[k];if(!m)continue;if(m.ab.t>0)m.ab.t=Math.max(0,m.ab.t-dt*(hasArt('overclock')?1.25:1));
+  const p=G.p;const M=p.modules,dtw=dt*(hasArt('hulldown')&&Math.abs(p.v)<15?1.5:1); // dtw: weapon reload time (Hull Down)
+  for(const k of SLOT_KEYS){const m=M[k];if(!m)continue;if(m.ab.t>0)m.ab.t=Math.max(0,m.ab.t-dt*(hasArt('overclock')?1.25:1)*(hasArt('adrenaline')&&p.nitro>0?1.5:1));
     if(m.rep&&m.rep.n>0){m.rep.t-=dt;if(m.rep.t<=0){m.rep.n--;m.rep.t=m.rep.gap;castAbility(k);}}}
   if(G.droneOD>0)G.droneOD-=dt;
   const cone=(dir,w)=>(e,dx,dy)=>Math.abs(angDiff(dir,Math.atan2(dy,dx)))<w;
   // front
   const f=M.front;
-  if(f){f.t-=dt;
+  if(f){f.t-=dtw;
     if(f.id==='cannon'){ // turret tracks 360° and fires once it's on target
       const tg=nearest(p.x,p.y,f.range);
       const want=tg?angDiff(p.a,Math.atan2(tg.y-p.y,tg.x-p.x)):0;
       p.gunO+=clamp(angDiff(p.gunO,want),-GUN_TURN*dt,GUN_TURN*dt);
       if(f.t<=0&&tg&&Math.abs(angDiff(p.gunO,want))<0.1){f.t=f.cd;const n=f.shots,ga=p.a+p.gunO,cg=Math.cos(ga),sg=Math.sin(ga);
         const px=p.x+Math.cos(p.a)*p.r*0.15,py=p.y+Math.sin(p.a)*p.r*0.15;
-        for(let i=0;i<n;i++){const off=(i-(n-1)/2);shoot(px+cg*p.r*1.05-sg*off*p.r*0.22,py+sg*p.r*1.05+cg*off*p.r*0.22,ga+off*0.06,640,f.dmg,f.range,{r:6,pierce:f.extra-1});}
+        for(let i=0;i<n;i++){const off=(i-(n-1)/2);shoot(px+cg*p.r*1.05-sg*off*p.r*0.22,py+sg*p.r*1.05+cg*off*p.r*0.22,ga+off*0.06,640,f.dmg,f.range,{r:6,pierce:f.extra-1,shell:1});}
         parts(px+cg*p.r*1.2,py+sg*p.r*1.2,7,'#ffcf6a',200,6,0.18);p.recoil=1;sfx('cannon');G.shake=Math.min(14,G.shake+0.7);
         if(f.mastery==='p'&&!f.echoing)f.echo=0.14;}
       if(f.echo>0){f.echo-=dt;if(f.echo<=0){f.echoing=true;f.t=0;f.echo=0;}}else if(f.echoing&&f.t>0)f.echoing=false;
@@ -1118,7 +1147,7 @@ function updateModules(dt){
       p.gunO+=clamp(angDiff(p.gunO,want),-GUN_TURN*1.5*dt,GUN_TURN*1.5*dt);if(f.hail>0)f.hail-=dt;
       if(f.t<=0&&tg&&Math.abs(angDiff(p.gunO,want))<0.15){const H=f.hail>0;f.t=f.cd*(H?0.3:1);f.alt=-(f.alt||1);
         const ga=p.a+p.gunO+rnd(-0.05,0.05),cg=Math.cos(ga),sg=Math.sin(ga),px=p.x+Math.cos(p.a)*p.r*0.15-sg*f.alt*p.r*0.1,py=p.y+Math.sin(p.a)*p.r*0.15+cg*f.alt*p.r*0.1;
-        const TS=H&&f.mastery==='a';shoot(px+cg*p.r*1.05,py+sg*p.r*1.05,ga,780,f.dmg*(TS?1.5:1),f.range,{r:3.5,pierce:TS?2:0,col:TS?'#ff9b5a':'#ffe08a'});p.recoil=0.4;sfx('pew');}
+        const TS=H&&f.mastery==='a';shoot(px+cg*p.r*1.05,py+sg*p.r*1.05,ga,780,f.dmg*(TS?1.5:1),f.range,{r:3.5,pierce:TS?2:0,col:TS?'#ff9b5a':'#ffe08a',shell:1});p.recoil=0.4;sfx('pew');}
     }
     if(f.id==='water'){ // water jet on the turret: pushes and slows what it hits
       const IW=f.mastery==='p',R=f.range*(IW?1.3:1),tg=nearest(p.x,p.y,R);const want=tg?angDiff(p.a,Math.atan2(tg.y-p.y,tg.x-p.x)):0;
@@ -1135,10 +1164,10 @@ function updateModules(dt){
   }
   // sides
   const s=M.side;
-  if(s&&s.id==='troops'){s.t-=dt;if(s.t<=0){s.t=s.cd;for(const side of [-1,1])G.allies.push(mkTroop(s,side*HALF+rnd(-0.6,0.6),1));trimAllies();sfx('mine');}}
+  if(s&&s.id==='troops'){s.t-=dtw;if(s.t<=0){s.t=s.cd;for(const side of [-1,1])G.allies.push(mkTroop(s,side*HALF+rnd(-0.6,0.6),1));trimAllies();sfx('mine');}}
   if(G.smokeT>0){G.smokeT-=dt;if(Math.random()<dt*25)smoke(p.x+rnd(-0.7,0.7)*G.smokeR,p.y+rnd(-0.7,0.7)*G.smokeR,1,34);
     if(G.smokeBlind)for(const e of G.ents)if(!e.dead&&!e.d.neutral&&Math.hypot(e.x-p.x,e.y-p.y)<G.smokeR)e.slow=Math.max(e.slow||0,0.3);}
-  if(s&&s.id!=='troops'&&s.id!=='smoke'){s.t-=dt;
+  if(s&&s.id!=='troops'&&s.id!=='smoke'){s.t-=dtw;
     if(s.t<=0){
       let fired=false;
       for(const side of [-1,1]){
@@ -1169,7 +1198,7 @@ function updateModules(dt){
   }
   // back
   const b=M.back;
-  if(b){b.t-=dt;
+  if(b){b.t-=dtw;
     if(b.id==='mines'&&b.t<=0&&Math.abs(p.v)>40){b.t=b.cd;
       for(let i=0;i<b.extra;i++){
         G.mines.push({x:p.x-Math.cos(p.a)*p.r*1.3+rnd(-6,6)*i,y:p.y-Math.sin(p.a)*p.r*1.3+rnd(-6,6)*i,arm:0.35,dmg:b.dmg,rad:b.radius,life:22,cluster:b.mastery==='p'});}
@@ -1211,7 +1240,7 @@ function updateModules(dt){
     if(!B.tg||B.n<=0)t.burst=null;
     else{p.turA=Math.atan2(B.tg.y-p.y,B.tg.x-p.x);
       while(B.t<=0&&B.n>0){B.t+=0.07;B.n--;const a=p.turA+rnd(-0.04,0.04);shoot(p.x+Math.cos(a)*p.r*0.9,p.y+Math.sin(a)*p.r*0.9,a,700,t.dmg*1.2*(t.mastery==='a'?2:1),t.range*1.3,{r:5,col:t.mastery==='a'?'#9fe0ff':'#ffb347',pierce:t.mastery==='a'?99:0});sfx('pew');}}}
-  if(t){t.t-=dt;
+  if(t){t.t-=dtw;
     const tg=nearest(p.x,p.y,t.range);
     if(tg&&!t.burst)p.turA=p.turA+angDiff(p.turA,Math.atan2(tg.y-p.y,tg.x-p.x))*Math.min(1,dt*12);
     if(t.t<=0&&tg){t.t=t.cd;
@@ -1461,7 +1490,7 @@ function openBossReward(){
 }
 
 /* ---------- upgrade cards ---------- */
-function rollRar(){const r=Math.random(),m=G.p.luck?2:1;return r<0.06*m?'e':r<0.3*m?'r':'c';}
+function rollRar(){const r=Math.random(),m=(G.p.luck?2:1)+Math.min(1,(G.p.tally||0)*0.01);return r<0.06*m?'e':r<0.3*m?'r':'c';}
 const ICONS={
   cannon:'<rect x="3" y="9" width="11" height="7" rx="2"/><path d="M14 11h7v3h-7"/><circle cx="7" cy="19" r="2"/><circle cx="12" cy="19" r="2"/>',
   plow:'<path d="M4 18 12 5l8 13z"/><path d="M8 18v3M12 18v3M16 18v3"/>',
@@ -1550,11 +1579,12 @@ function makeModuleCards(){
   return out;
 }
 let curLevel=0;
+const withWrench=c=>{if(hasArt('wrench'))c.push({rar:'c',t:'Field repair',icon:'repair',desc:'Skip the upgrade and repair 40 hull.',ap:()=>{G.p.hp=Math.min(G.p.maxHp,G.p.hp+40);}});return c;};
 function openLevel(){
   sfx('level');buzz(15);mode='level';const p=G.p;curLevel=G.lvQ.shift();
   const empty=Object.values(p.modules).some(m=>!m);
   const isMod=MOD_LEVELS.includes(curLevel)&&empty;
-  const cards=isMod?makeModuleCards():makeUpgradeCards();
+  const cards=withWrench(isMod?makeModuleCards():makeUpgradeCards());
   showCards('Level '+curLevel,isMod?'Bolt a new module onto your tank.':'Pick an upgrade.',cards,c=>{
     c.ap();hideCards();afterPick();
   },!isMod,()=>openLevelCards(isMod));
@@ -1588,7 +1618,7 @@ function applyMastery(m){ // one-off stat changes; the rest are checked where th
   }
 }
 function openLevelCards(isMod){
-  const cards=isMod?makeModuleCards():makeUpgradeCards();
+  const cards=withWrench(isMod?makeModuleCards():makeUpgradeCards());
   renderCardList(cards);
 }
 
@@ -1632,7 +1662,7 @@ function endRun(won){
   if(mode==='over')return;
   const quit=won==='quit';won=G.cleared||won===true; // after a clear, dying or quitting in Overtime still counts as a win
   mode='over';releaseJoy();const p=G.p;const md=G.mapDef;
-  const silver=Math.round((p.totalXp/6+G.bossKills*30+(won?100:0))*md.silver*p.silverMult)+G.otSilver;
+  const silver=Math.round((p.totalXp/6+G.bossKills*30+(won?100:0))*md.silver*p.silverMult)+G.otSilver+(G.bonusSilver||0);
   SAVE.silver+=silver;SAVE.runs=(SAVE.runs||0)+1;
   const reached=won?5:G.stage;
   if(reached>(SAVE.stage||0))SAVE.stage=reached;
@@ -1701,6 +1731,14 @@ function renderGarage(){
     crl.appendChild(row(c.name,q?'Milestone reward: '+q.t.toLowerCase()+'. '+c.perk:c.perk,{sel:SAVE.selCrew===c.id,locked:!own,price:own||q?null:c.cost,tag:q?'Quest':null,
       onSel:own?()=>{SAVE.selCrew=c.id;persist();renderGarage();}:null,
       onBuy:()=>{SAVE.silver-=c.cost;SAVE.crew.push(c.id);SAVE.selCrew=c.id;persist();renderGarage();}}));});
+  const sml=$('#smodList');sml.innerHTML='';
+  [''].concat(Object.keys(MODS).filter(id=>id!=='cannon'&&modUnlocked(id))).forEach(id=>{const d=MODS[id];
+    sml.appendChild(row(id?d.name+' ('+SLOT_NAME[d.slot]+')':'None',id?d.desc:'Start with the Main Gun only.',{sel:SAVE.selMod===id,onSel:()=>{SAVE.selMod=id;persist();renderGarage();}}));});
+  const kl=$('#kitList');kl.innerHTML='';
+  [''].concat(Object.keys(ARTIFACTS)).forEach(id=>{const A=ARTIFACTS[id],own=!id||SAVE.kit.includes(id);
+    kl.appendChild(row(id?A.name:'No kit',id?A.desc:'Artifacts only from supply chests.',{sel:SAVE.selKit===id,locked:!own,price:own?null:A.cost,
+      onSel:own?()=>{SAVE.selKit=id;persist();renderGarage();}:null,
+      onBuy:()=>{SAVE.silver-=A.cost;SAVE.kit.push(id);SAVE.selKit=id;persist();renderGarage();}}));});
   const chl=$('#chassisList');chl.innerHTML='';
   CHASSIS.forEach(c=>{const own=SAVE.chassis.includes(c.id);
     const LN=LINES[c.id];
@@ -1889,6 +1927,7 @@ function update(dt){
 if(!e.d.stat&&!e.d.boss){e.x+=b.vx*0.012;e.y+=b.vy*0.012;}let bd=b.dmg;if(e.d.armorFront&&Math.abs(angDiff(e.a,Math.atan2(-b.vy,-b.vx)))<1.0){bd*=0.6;parts(b.x,b.y,3,'#cfd6e0',150,3,0.2);}hurt(e,bd);b.hits.push(e);
         if(hasArt('incendiary')){e.burn=2;e.burnDps=Math.max(e.burnDps||0,b.dmg*0.3);}
         if(b.boom)explode(b.x,b.y,b.boom,b.dmg*0.6,false,true);
+        if(b.shell&&hasArt('thermite')){G.burns.push({x:b.x,y:b.y,r:20,life:2,max:2,dps:b.dmg*0.5});if(G.burns.length>44)G.burns.shift();}
         if(hasArt('ricochet')&&!b.rico){const nx_=nearest(b.x,b.y,250,o=>o!==e&&!b.hits.includes(o));if(nx_){const a_=Math.atan2(nx_.y-b.y,nx_.x-b.x);G.pb.push({x:b.x,y:b.y,vx:Math.cos(a_)*600,vy:Math.sin(a_)*600,dmg:b.dmg*0.6,life:0.5,r:4,pierce:0,hits:[e],col:b.col,rico:1});}}parts(b.x,b.y,2,'#ffd25a',90,3,0.2);
         if(b.pierce>0)b.pierce--;else{b.life=0;break;}}}
   }
@@ -1966,7 +2005,10 @@ if(!e.d.stat&&!e.d.boss){e.x+=b.vx*0.012;e.y+=b.vy*0.012;}let bd=b.dmg;if(e.d.ar
 function contact(e,dx,dy,dist,rr){
   const p=G.p,d=e.d;
   if(d.edible>=0&&p.rank>=d.edible&&!d.boss){
-    e.dead=true;p.eaten++;if(hasArt('plating')&&p.eaten%25===0){p.maxHp+=4;p.hp+=4;addText(p.x,p.y-p.r-12,'+4 max HP','#7be37b');}G.rs.eat[d.base||e.type]=(G.rs.eat[d.base||e.type]||0)+1;gainXp(d.xp);if(hasCap('marta')&&(d.base||e.type)==='grunt')p.hp=Math.min(p.maxHp,p.hp+2);sfx('eat',d.xp>=9?2:1);p.chomp=d.xp>=5?1:0.5;if(d.xp>=9)buzz(12);
+    e.dead=true;p.eaten++;if(hasArt('plating')&&p.eaten%25===0){p.maxHp+=4;p.hp+=4;addText(p.x,p.y-p.r-12,'+4 max HP','#7be37b');}G.rs.eat[d.base||e.type]=(G.rs.eat[d.base||e.type]||0)+1;gainXp(d.xp);if(hasCap('marta')&&(d.base||e.type)==='grunt')p.hp=Math.min(p.maxHp,p.hp+2);
+    if(hasArt('furnace'))for(const k of SLOT_KEYS){const m=p.modules[k];if(m)m.ab.t=Math.max(0,m.ab.t-0.2);}
+    if(hasArt('dynamo'))p.nitroCd-=0.15;
+    if(hasArt('conscript')&&(d.base||e.type)==='grunt'&&Math.random()<0.2){G.allies.push(mkTroop({dmg:6*p.wdm,range:300,mastery:''},rnd(0,TAU),1));trimAllies();}sfx('eat',d.xp>=9?2:1);p.chomp=d.xp>=5?1:0.5;if(d.xp>=9)buzz(12);
     parts(e.x,e.y,d.neutral?6:5,d.neutral?'#8f7f5f':'#a8432b',140,4,0.35);
     if(d.xp>=5)addText(e.x,e.y-e.r,'+'+d.xp,COL.gold||'#e8ad2c');
     G.shake=Math.min(10,G.shake+(d.xp>=9?2.5:0.6));
@@ -1981,6 +2023,7 @@ function contact(e,dx,dy,dist,rr){
     const plow=p.modules.front&&p.modules.front.id==='plow';
     let rd=p.ramDmg*(0.35+Math.abs(p.v)/200)*(p.nitro>0?2:1)*(p.nitro>0&&hasPerk('steamroller')?2:1);
     if(p.nitro>0&&hasPerk('steamroller')&&!d.boss&&!d.stat)e.stun=1.2;
+    if(hasArt('cowcatcher'))rd*=1+0.6*Math.min(1,Math.abs(p.v)/250);
     if(front&&plow)rd+=p.modules.front.dmg;
     hurt(e,rd);if(e.dead&&hasArt('vampire'))p.hp=Math.min(p.maxHp,p.hp+3);
     if(hasCap('cass')&&!e.dead){e.burn=3;e.burnDps=Math.max(e.burnDps||0,p.ramDmg*0.4);}
