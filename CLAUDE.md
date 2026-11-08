@@ -31,6 +31,7 @@ Mobile-first 3D tank roguelike in ONE file: `index.html` (inline CSS and JS, ins
   - `setupWorld()` builds the ground, roads and trees; `render3D()` draws each frame; `drawOverlay3D()` handles 2D overlays such as HP bars, texts, arrows and the joystick.
   - The camera is orthographic at a 55° pitch (`PITCH`). Game angle `a` maps to three.js yaw `-a`.
 - `install (PWA)`: registers `sw.js` (only over http/https), adds the favicon and iOS home-screen icon from the manifest's SVG, and shows the title screen's Install button or iPhone hint. The app icon is an SVG drawn in code inside `manifest.webmanifest`. `sw.js` makes pages network-first and the pinned three.js plus fonts cache-first. When you add a new runtime file, add it to `CORE` in `sw.js`.
+  - Look: `GEO` shapes are rounded, and `meshFrom` uses the `H` versions for big single meshes. Dark outlines come from `lineMat(w)`/`outlineGroup` (inside-out shapes inflated by a fixed world width, instanced per shape; enemy parts share their `instanceMatrix` through `pt.ol`). `fx.flare` is the soft additive glow for blasts, muzzle flashes, shots and fire. Mines fly out through `throwMine` and only arm after landing (`m.fl`, `m.h`).
 - `render2D()` is the fallback if WebGL or three.js fails.
 - `HUD`: `updateHUD()`.
 

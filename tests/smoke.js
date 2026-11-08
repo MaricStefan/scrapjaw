@@ -252,6 +252,13 @@ run('iron','lou',true);run('ash','ida',true);run('ash','sid',false);run('iron','
  for(const t of ['chassis','cap','crew','mod','kit','paint','emblem','pennant','mascot']){const L=api.gItems(t);assert.ok(L.length&&L.every(i=>i.name&&i.icon),t+' items are complete');}
  api.R3.on=false;api.openMap();api.render();api.openGarage();api.render();api.R3.on=true;
  api.setSave(saved);console.log('world map + build screen ok');}
+// --- mines leave the rack in an arc, bounce, and only arm after they land ---
+{api.SAVE.selMap='dust';api.startRun();const G=api.G,P=G.p;G.spawnT=G.helperT=1e9;G.ents=G.ents.filter(e=>e.d.neutral);G.mines=[];P.x=P.y=1500;G.crew='';for(const k in P.modules)P.modules[k]=null;
+ api.throwMine({arm:0,dmg:9,rad:40,life:9},P.x,P.y,P.x+150,P.y+60);const m=G.mines[0];let up=0;const near_=api.addEnt('tank',P.x+150,P.y+60);near_.hp=near_.max=1e6;near_.d=Object.assign({},near_.d,{spd:0,shoot:null,contact:0});
+ let landed=false;for(let i=0;i<60*2&&G.mines.length;i++){api.update(1/60);P.hp=P.maxHp;if(m.fl<1){up=Math.max(up,m.h);assert.strictEqual(near_.hp,1e6,'a mine in the air does not go off');}else landed=true;api.render();}
+ assert.ok(up>20&&landed,'the mine arcs and lands '+up);assert.ok(near_.hp<1e6,'it goes off once it has landed');
+ const b=[];P.modules.back=api.mkMod('mines');G.mines=[];for(let i=0;i<8;i++){P.modules.back.t=0;P.v=120;api.update(1/60);P.hp=P.maxHp;if(G.mines.length)b.push(G.mines[G.mines.length-1].tx);G.mines=[];}
+ assert.ok(new Set(b.map(x=>Math.round(x))).size>1,'drops land in different spots');api.endRun('quit');console.log('bouncing mines ok');}
 // --- ranged and static enemies can't pile up (per-type caps) ---
 {api.SAVE.selMap='dust';api.startRun();const G=api.G,P=G.p;G.stage=2;let maxT=0,maxW=0;
  for(let i=0;i<60*120;i++){if(api.mode==='play'){api.joy.dx=0;api.joy.dy=0;api.update(1/60);P.hp=P.maxHp;if(G.boss)G.boss=null,G.bossSpawned=true;
