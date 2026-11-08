@@ -12,7 +12,7 @@ Scrapjaw goes on Play as a **Trusted Web Activity (TWA)**: a thin Android app, b
 |---|---|
 | `listing.md` | Store texts: name, short and full description, contact, release notes |
 | `forms.md` | Answers for Data safety, Content rating, Ads, Target audience and the other App content forms |
-| `graphics/` | 512 px icon, 1024×500 feature graphic, six 1920×1080 screenshots |
+| `graphics/` | 512 px icon, 1024×500 feature graphic, seven 1920×1080 screenshots |
 | `make_graphics.py` | Regenerates the icons and graphics from the real game (`py -3 store/make_graphics.py`) |
 | `twa-manifest.json` | Bubblewrap settings for the Android app |
 | `assetlinks.json` | Template for the file that links the website and the app |

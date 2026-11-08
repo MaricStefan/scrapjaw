@@ -26,10 +26,10 @@ REAL TANKS THAT EVOLVE
 Start as a Scout, a Standard or a Bulwark. After every boss, choose speed or armor, and watch your tank grow into the next model of its family, from the T-34 to the T-54, or from the KV-1 to the Conqueror.
 
 YOUR LOADOUT, YOUR STYLE
-Before each run, pick your chassis, a captain with a perk and a drawback, a crew that rides on your deck and fights beside you, a starting module and a starting artifact.
+Before each run, pick your chassis, a captain with a perk and a drawback, a crew that rides on your deck and fights beside you, a starting module and a starting artifact, and watch it all come together on your tank in the depot. Then paint it, add an emblem and a pennant, and bring a mascot.
 
-THREE BATTLEFIELDS, TWELVE BOSSES
-Fight through green farmland, a smoking iron foundry and burning ashlands. Each has its own enemies and four bosses, from a drilling war machine to an armored train and a burrowing wyrm.
+NINE BATTLEFIELDS, TWELVE BOSSES
+Drive across a world map of three regions: green farmland, a smoking iron foundry and burning ashlands. Each region has its own enemies and four bosses, from a drilling war machine to an armored train and a burrowing wyrm, and three battlefields that get tougher and pay better.
 
 ENDLESS OVERTIME
 Cleared the map? Push on into Overtime, where night falls, mortars rain down and the silver keeps coming for as long as you survive.
@@ -55,9 +55,9 @@ Privacy policy URL: https://maricstefan.github.io/scrapjaw/privacy.html
 |---|---|---|
 | App icon | icon-512.png | 512×512 PNG |
 | Feature graphic | feature-1024x500.png | 1024×500 PNG/JPG |
-| Phone screenshots | screenshot-1 … screenshot-6 | 2–8 images, 16:9, at least 1080 px |
+| Phone screenshots | screenshot-1 … screenshot-7 | 2–8 images, 16:9, at least 1080 px |
 
 Regenerate them before release so they show the finished game: `py -3 store/make_graphics.py`
 
 ## Release notes (first release)
-First release of Scrapjaw. Three battlefields, twelve bosses, nineteen modules, sixteen captains and real tanks that evolve after every boss.
+First release of Scrapjaw. Nine battlefields, twelve bosses, nineteen modules, sixteen captains and real tanks that evolve after every boss.

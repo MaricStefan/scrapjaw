@@ -42,7 +42,8 @@ async def screenshots(b):
     shots=[]
     async def snap(name):
         await pg.wait_for_timeout(450);p=OUT/f'screenshot-{name}.png';await pg.screenshot(path=str(p));shots.append(p.name)
-    await pg.click('#startBtn');await pg.wait_for_timeout(300);await snap('6-garage')
+    await pg.click('#startBtn');await pg.wait_for_timeout(900);await snap('6-world-map')
+    await pg.click('#mapGo');await pg.wait_for_timeout(600);await snap('7-build')
     # Greenvale with fighting crew, drones and a full loadout
     await pg.evaluate("()=>{const a=__api;a.SAVE.selMap='dust';a.SAVE.selCrew='riflemen';a.startRun();const P=a.G.p;P.modules.side=a.mkMod('broadside');P.modules.back=a.mkMod('drone');P.modules.top=a.mkMod('turret');P.modules.back.extra=3;__ff(40);}")
     await pg.evaluate(CLEAR);await snap('1-greenvale')
