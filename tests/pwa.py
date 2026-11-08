@@ -44,7 +44,7 @@ async def main():
         await pg.reload();await pg.wait_for_timeout(1500)
         st=await pg.evaluate("({three:!!window.THREE,api:!!window.__api,r3:!!(window.__api&&__api.R3.on),mode:window.__api&&__api.mode})")
         check(st['three'] and st['api'] and st['r3'],'boots offline with 3D: '+str(st))
-        await pg.click('#startBtn');await pg.click('#rollBtn');await pg.wait_for_timeout(300)
+        await pg.click('#startBtn');await pg.wait_for_timeout(300);await pg.click('#mapGo');await pg.click('#rollBtn');await pg.wait_for_timeout(300)
         check(await pg.evaluate("__api.mode")=='play','run starts offline')
         await pg.screenshot(path=str(ROOT/'shots/pwa_offline.png'))
         check(not errs,'no page errors'+('' if not errs else ': '+str(errs)))

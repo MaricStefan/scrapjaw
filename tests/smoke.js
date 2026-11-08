@@ -233,6 +233,25 @@ run('iron','lou',true);run('ash','ida',true);run('ash','sid',false);run('iron','
  G.arts=['firststrike'];const e=api.addEnt('tank',P.x+400,P.y);const h0=e.hp;api.hurt(e,10);const first=h0-e.hp;api.hurt(e,10);assert.ok(Math.abs(first-15)<0.01&&Math.abs(h0-e.hp-25)<0.01,'First Strike hits unhurt enemies harder');
  G.arts=['wrench'];G.lvQ=[2];api.openLevel();assert.strictEqual(api.mode,'level','a level-up opens with the wrench in the kit');
  api.setMode('play');api.endRun('quit');S.mods=saved.mods;S.kit=saved.kit;S.selKit=saved.selKit;S.selMod=saved.selMod;console.log('loadout ok');}
+// --- world map: nine plots, branching unlocks, old saves; build screen: try before you buy, decorations ---
+{const saved=JSON.parse(JSON.stringify(api.SAVE));
+ api.setSave({silver:5000});let S=api.SAVE;assert.strictEqual(api.MAPS.length,9,'nine plots');assert.ok(api.MAPS.every(m=>m.pal&&m.rank>=1&&m.reg>=0&&m.tier>=0&&(m.req===null||api.MAPS.some(x=>x.id===m.req))),'every plot is placed and reachable');
+ api.openMap();assert.strictEqual(api.mode,'map');for(let i=0;i<30;i++){api.updateMap(1/60);api.render();}
+ api.selectPlot('rift');assert.strictEqual(S.selMap,'dust','a locked plot cannot be selected');
+ api.startRun();api.clearMap();assert.ok(S.maps.includes('ridge')&&S.maps.includes('iron')&&!S.maps.includes('slag'),'the first plot opens its next plot and the next region');api.endRun('quit');
+ api.openMap();api.selectPlot('iron');assert.strictEqual(S.selMap,'iron','an open plot can be selected');
+ api.setSave({maps:['dust','iron'],cleared:{dust:true,iron:true}});assert.ok(['ridge','slag','ash'].every(id=>api.SAVE.maps.includes(id)),'old saves get the plots they earned');
+ api.setSave({silver:1000});S=api.SAVE;api.openGarage();api.render();const k0=api.DEPOT.key;
+ api.gTap('cap','rosa');assert.strictEqual(S.selCap,'sarge','tapping a locked captain only previews it');api.render();assert.notStrictEqual(api.DEPOT.key,k0,'the preview reaches the depot');
+ assert.ok(api.gBuy('cap','rosa')&&S.selCap==='rosa'&&S.silver===500&&S.caps.includes('rosa'),'buying selects it');assert.ok(!api.gBuy('cap','ozzy'),'cannot overspend');assert.ok(!api.gBuy('crew','radio'),'quest items cannot be bought');
+ S.silver=99999;for(const slot in api.DECOR)for(const it of api.DECOR[slot].items){assert.ok(api.gBuy(slot,it.id),'buy '+it.id);assert.strictEqual(S.decor[slot],it.id);api.render();
+   const m=api.tankMesh3D(api.TANKS.t34,{front:api.mkMod('cannon'),side:null,back:null,top:null},'',{[slot]:it.id});assert.ok(m.root.children.length>10,it.id+' builds');}
+ api.startRun();api.update(1/60);api.render();api.endRun('quit');
+ const again=JSON.parse(JSON.stringify(api.SAVE));api.setSave(again);assert.strictEqual(api.SAVE.decor.mascot,'goat','decorations are saved');
+ api.setSave(Object.assign({},again,{decor:{paint:'nope',emblem:'',pennant:'',mascot:''}}));assert.strictEqual(api.SAVE.decor.paint,'','unknown decorations are dropped');
+ for(const t of ['chassis','cap','crew','mod','kit','paint','emblem','pennant','mascot']){const L=api.gItems(t);assert.ok(L.length&&L.every(i=>i.name&&i.icon),t+' items are complete');}
+ api.R3.on=false;api.openMap();api.render();api.openGarage();api.render();api.R3.on=true;
+ api.setSave(saved);console.log('world map + build screen ok');}
 // --- ranged and static enemies can't pile up (per-type caps) ---
 {api.SAVE.selMap='dust';api.startRun();const G=api.G,P=G.p;G.stage=2;let maxT=0,maxW=0;
  for(let i=0;i<60*120;i++){if(api.mode==='play'){api.joy.dx=0;api.joy.dy=0;api.update(1/60);P.hp=P.maxHp;if(G.boss)G.boss=null,G.bossSpawned=true;
