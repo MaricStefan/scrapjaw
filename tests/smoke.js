@@ -19,7 +19,7 @@ global.addEventListener=()=>{};global.performance={now:()=>Date.now()};
 global.requestAnimationFrame=()=>{};global.setTimeout=f=>{f();return 0;};
 let api;let T0=Date.now();
 class FakeAC{constructor(){this.state='running';this.sampleRate=100;this.destination=mkStub();}get currentTime(){return (Date.now()-T0)/1000;}
- createGain(){return mkStub()}createOscillator(){return mkStub()}createBiquadFilter(){return mkStub()}createBufferSource(){return mkStub()}createDynamicsCompressor(){return mkStub()}
+ createGain(){return mkStub()}createOscillator(){return mkStub()}createBiquadFilter(){return mkStub()}createBufferSource(){return mkStub()}createDynamicsCompressor(){return mkStub()}createConvolver(){return mkStub()}
  createBuffer(){return {getChannelData:()=>new Float32Array(200)}}resume(){}}
 let ivs=[];global.setInterval=f=>{ivs.push(f);return ivs.length};global.clearInterval=()=>{};
 const THREE=require('three');class FakeRen{constructor(){this.domElement={style:{},remove(){}};this.shadowMap={};this.calls=0;}setPixelRatio(){}setSize(){}render(s,c){this.calls++;s.updateMatrixWorld();c.updateMatrixWorld();}}
@@ -104,7 +104,8 @@ run('iron','lou',true);run('ash','ida',true);run('ash','sid',false);run('iron','
  }
  console.log('abilities ok:',Object.keys(api.AB).join(' '));api.endRun('quit');}
 // --- garrisons burst open when you drive close; the Swarm rushes weak enemies before the boss ---
-{api.SAVE.selMap='dust';api.startRun();const G=api.G,P=G.p;G.t=10;
+{api.SAVE.selMap='dust';api.startRun();for(let k=0;k<6&&!api.G.ents.some(e=>e.garrison);k++)api.startRun(); // about 1 run in 18 starts with no garrison
+ const G=api.G,P=G.p;G.t=10;
  const hut=G.ents.find(e=>e.type==='hut');assert.ok(G.ents.some(e=>e.garrison),'some buildings are garrisoned');
  hut.garrison=5;hut.x=P.x+150;hut.y=P.y;const before=G.ents.filter(e=>!e.d.neutral).length;api.update(1/60);
  assert.strictEqual(hut.garrison,0,'garrison opens');assert.ok(G.ents.filter(e=>!e.d.neutral).length>=before+5,'soldiers pour out');api.render();
@@ -288,7 +289,7 @@ run('iron','lou',true);run('ash','ida',true);run('ash','sid',false);run('iron','
    return out;};
  const ox=fight(1,12,(b,o)=>{o.type=b.type;o.fire=o.fire||b.st==='fire';o.pools=Math.max(o.pools||0,G.hazards.length);});
  assert.ok(ox.type==='ox'&&ox.fire&&ox.pools>3,'Furnace Ox breathes fire and leaves molten pools '+JSON.stringify(ox));
- const cr=fight(2,16,(b,o)=>{o.type=b.type;o.swing=o.swing||b.st==='swing';o.adds=Math.max(o.adds||0,G.ents.filter(e=>!e.d.neutral&&!e.d.boss).length);});
+ const cr=fight(2,16,(b,o)=>{o.type=b.type;o.swing=o.swing||b.st==='swing';o.seen=o.seen||new Set();G.ents.forEach(e=>{if(!e.d.neutral&&!e.d.boss)o.seen.add(e);});o.adds=o.seen.size;}); // every add it dropped, even ones your guns killed at once
  assert.ok(cr.type==='crane'&&cr.swing&&cr.adds>=3,'Crane Queen swings and drops reinforcements '+JSON.stringify(cr));
  const an=fight(3,8,(b,o)=>{o.type=b.type;o.waves=Math.max(o.waves||0,G.waves.length);});
  assert.ok(an.type==='anvil'&&an.waves>=1,'The Anvil sends shockwaves '+JSON.stringify(an));
