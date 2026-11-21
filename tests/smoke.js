@@ -134,7 +134,8 @@ run('iron','lou',true);run('ash','ida',true);run('ash','sid',false);run('iron','
  api.setSave(saved);console.log('garage ok');}
 // --- artifacts: a chest per stage, a choice of two, and each one works ---
 {api.SAVE.selMap='dust';api.startRun();const G=api.G,P=G.p;G.chestT=0.01;api.update(1/60);
- assert.strictEqual(G.chests.length,1,'a chest spawns');const c=G.chests[0];P.x=c.x;P.y=c.y;api.update(1/60);
+ assert.strictEqual(G.chests.length,1,'a chest spawns');const c=G.chests[0];P.x=c.x;P.y=c.y;api.update(1/60);assert.strictEqual(api.mode,'play','a chest still in the air cannot be opened');
+ G.spawnT=1e9;for(let i=0;i<60*6&&c.drop>0;i++){P.x=c.x;P.y=c.y;P.hp=P.maxHp;G.lvQ=[];P.xp=0;api.update(1/60);api.render();}assert.ok(!(c.drop>0),'the parachute lands');P.x=c.x;P.y=c.y;api.update(1/60);
  assert.strictEqual(api.mode,'level','chest offers a choice');api.pick(0);assert.strictEqual(G.arts.length,1,'artifact taken');api.setMode('play');
  G.arts=Object.keys(api.ARTIFACTS);for(const id of G.arts){const A=api.ARTIFACTS[id];if(A.ap)A.ap(P);}
  P.modules.side=api.mkMod('broadside',P.wdm);P.modules.back=api.mkMod('mines',P.wdm);
