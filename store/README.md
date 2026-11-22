@@ -12,7 +12,7 @@ Scrapjaw goes on Play as a **Trusted Web Activity (TWA)**: a thin Android app, b
 |---|---|
 | `listing.md` | Store texts: name, short and full description, contact, release notes |
 | `forms.md` | Answers for Data safety, Content rating, Ads, Target audience and the other App content forms |
-| `graphics/` | 512 px icon, 1024×500 feature graphic, seven 1920×1080 screenshots |
+| `graphics/` | 512 px icon, 1024×500 feature graphic, seven captioned 1920×1080 store screenshots (`play-*`) and the raw game shots (`screenshot-*`) |
 | `make_graphics.py` | Regenerates the icons and graphics from the real game (`py -3 store/make_graphics.py`) |
 | `twa-manifest.json` | Bubblewrap settings for the Android app |
 | `assetlinks.json` | Template for the file that links the website and the app |
@@ -63,7 +63,7 @@ Without this, the app shows a browser address bar at the top.
 ### 5. Set up the app in Play Console
 1. Create app: name **Scrapjaw**, Game, Free, then accept the declarations.
 2. Fill **App content** with the answers in `forms.md`.
-3. Fill **Main store listing** with `listing.md` and upload the files in `graphics/`.
+3. Fill **Main store listing** with `listing.md` and upload the files in `graphics/` (phone screenshots: the `play-*` files in order; reuse them for the tablet slots).
 4. **Testing → Closed testing**: create a track, upload the `.aab`, add your testers' emails, and roll it out. (Personal accounts: keep it running 12+ testers for 14 days.)
 5. When the test period is done, **Production → Create release**, upload the same or a newer `.aab`, add release notes, and send it for review. Reviews usually take a few days.
 
